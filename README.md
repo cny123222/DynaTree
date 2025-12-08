@@ -64,9 +64,6 @@ Cache 结构: [initial tokens (0:start_size)] + [recent tokens (seq_len-recent_s
 ├── baseline_test.py             # 基线性能测试
 │
 ├── results/                     # 结果图表
-│
-├── streaming-llm/               # StreamingLLM 参考实现
-└── SnapKV/                      # SnapKV 参考实现
 ```
 
 ## 环境配置
@@ -84,7 +81,7 @@ pip install torch transformers datasets numpy tqdm
 
 ### 模型和数据集
 
-- **模型**: `EleutherAI/pythia-70m-deduped`
+- **模型**: `EleutherAI/pythia-2.8b`
 - **数据集**: `PG-19` (长文本), `wikitext-2-raw-v1` (短文本)
 
 ## 使用方法

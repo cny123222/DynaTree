@@ -53,7 +53,7 @@ def get_device():
     return torch.device("cpu")
 
 
-def load_model_and_tokenizer(model_id: str = "EleutherAI/pythia-70m-deduped"):
+def load_model_and_tokenizer(model_id: str = "EleutherAI/pythia-2.8b"):
     """
     Load model and tokenizer using Auto classes.
     
@@ -74,11 +74,45 @@ def load_model_and_tokenizer(model_id: str = "EleutherAI/pythia-70m-deduped"):
     
     # Use AutoModelForCausalLM for automatic model class detection
     # This provides better flexibility for different model architectures
-    model = AutoModelForCausalLM.from_pretrained(model_id)
+    import os
+    os.environ["TRANSFORMERS_VERBOSITY"] = "info"  # Enable transformers logging
+    
+    print("Loading model (this may take a while for large models)...")
+    
+    # Try offline first to avoid network timeouts for cached models
+    try:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_id,
+            low_cpu_mem_usage=True,
+            local_files_only=True,  # Try cache first
+        )
+        print("Model loaded from cache")
+    except (OSError, ValueError) as e:
+        # Model not in cache, download it
+        print(f"Model not in cache, downloading from HuggingFace Hub...")
+        model = AutoModelForCausalLM.from_pretrained(
+            model_id,
+            low_cpu_mem_usage=True,
+            local_files_only=False,  # Allow download
+        )
+        print("Model downloaded and loaded")
+    
+    print("Moving model to device...")
     model.to(device)
     model.eval()
+    print("Model ready!")
     
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    # Same logic for tokenizer
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_id,
+            local_files_only=True
+        )
+    except (OSError, ValueError):
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_id,
+            local_files_only=False
+        )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     
@@ -310,7 +344,9 @@ Examples:
     )
     
     # General arguments
-    parser.add_argument("--model_id", type=str, default="EleutherAI/pythia-70m-deduped",
+    # EleutherAI/pythia-6.9b
+    # EleutherAI/pythia-70m-deduped
+    parser.add_argument("--model_id", type=str, default="EleutherAI/pythia-2.8b",
                        help="Model ID from HuggingFace")
     parser.add_argument("--num_samples", type=int, default=2,
                        help="Number of PG-19 samples to test")
