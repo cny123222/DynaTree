@@ -2,7 +2,7 @@
 Unified Evaluation Module for KV Cache Compression
 
 This module provides evaluation functions that work with any compression method.
-It measures PPL (perplexity) and accuracy with KV cache compression.
+It measures PPL (perplexity), accuracy, and timing metrics with KV cache compression.
 
 Key implementation points:
 1. Process one token at a time (autoregressive)
@@ -10,8 +10,10 @@ Key implementation points:
 3. Apply compression after EVERY forward pass (if enabled)
 4. PPL = exp(mean(nlls))
 5. Accuracy = num_correct / num_tokens
+6. TTFT/TPOT measured across ALL tokens (not just initial generation)
 """
 
+import time
 from typing import Callable, Dict, List, Optional, Union
 import torch
 from torch.nn import CrossEntropyLoss
@@ -89,7 +91,11 @@ def evaluate_with_compression(
             "perplexity": float('inf'),
             "accuracy": 0.0,
             "num_tokens": 0,
-            "final_cache_size": 0
+            "final_cache_size": 0,
+            "ttft": 0.0,
+            "tpot": 0.0,
+            "throughput": 0.0,
+            "total_time": 0.0,
         }
     
     # Loss function for per-token NLL
@@ -100,6 +106,10 @@ def evaluate_with_compression(
     nlls = []
     num_correct = []
     
+    # Timing metrics
+    ttft = None
+    token_times = []
+    
     model.eval()
     
     # Create progress bar if requested
@@ -107,8 +117,12 @@ def evaluate_with_compression(
     if show_progress:
         token_range = tqdm(token_range, desc="Evaluating")
     
+    total_start = time.perf_counter()
+    
     with torch.inference_mode():
         for idx in token_range:
+            token_start = time.perf_counter()
+            
             # Current token (single token input)
             current_token = input_ids[:, idx:idx+1]
             
@@ -133,14 +147,6 @@ def evaluate_with_compression(
             predicted = torch.argmax(logits, dim=-1)
             num_correct.append((predicted == target).int().item())
             
-            # Update progress bar
-            if show_progress:
-                current_ppl = torch.exp(torch.tensor(nlls).mean()).item()
-                current_acc = sum(num_correct) / len(num_correct)
-                token_range.set_description(
-                    f"PPL: {current_ppl:.2f}, Acc: {current_acc:.2%}"
-                )
-            
             # Get KV cache from outputs
             past_key_values = outputs.past_key_values
             
@@ -158,23 +164,65 @@ def evaluate_with_compression(
                 
                 # Convert back to DynamicCache for next iteration
                 past_key_values = to_dynamic_cache(compressed_kv)
+            
+            # Record timing
+            token_time = time.perf_counter() - token_start
+            token_times.append(token_time)
+            
+            # Record TTFT (first token time)
+            if ttft is None:
+                ttft = token_time
+            
+            # Update progress bar
+            if show_progress:
+                current_ppl = torch.exp(torch.tensor(nlls).mean()).item()
+                current_acc = sum(num_correct) / len(num_correct)
+                token_range.set_description(
+                    f"PPL: {current_ppl:.2f}, Acc: {current_acc:.2%}"
+                )
+    
+    total_time = time.perf_counter() - total_start
     
     # Calculate final metrics
     perplexity = torch.exp(torch.tensor(nlls).mean()).item()
     accuracy = sum(num_correct) / len(num_correct)
     
-    # Get final cache size
+    # Calculate timing metrics
+    num_tokens = len(nlls)
+    if num_tokens > 1:
+        # TPOT: average time per token (excluding first token)
+        tpot = sum(token_times[1:]) / (num_tokens - 1) if num_tokens > 1 else token_times[0]
+    else:
+        tpot = ttft if ttft else 0.0
+    
+    throughput = num_tokens / total_time if total_time > 0 else 0.0
+    
+    # Get final cache size (actual number of tokens stored)
+    # Note: skip_layers may not be compressed, so check a compressed layer
     final_cache_size = 0
     if past_key_values is not None:
         kv_list = list(normalize_kv_cache(past_key_values))
         if kv_list:
-            final_cache_size = kv_list[0][0].size(2)
+            # Find a layer that was actually compressed (not in skip_layers)
+            # to get the true compressed cache size
+            for layer_idx, (k, v) in enumerate(kv_list):
+                if layer_idx not in skip_layers:
+                    final_cache_size = k.size(2)
+                    break
+            # If all layers were skipped, fall back to first layer
+            if final_cache_size == 0:
+                final_cache_size = kv_list[0][0].size(2)
     
     return {
         "perplexity": perplexity,
         "accuracy": accuracy,
-        "num_tokens": len(nlls),
-        "final_cache_size": final_cache_size
+        "num_tokens": num_tokens,
+        "final_cache_size": final_cache_size,
+        # Timing metrics (measured across ALL tokens)
+        "ttft": ttft if ttft else 0.0,
+        "tpot": tpot,
+        "throughput": throughput,
+        "total_time": total_time,
     }
 
 

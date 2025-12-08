@@ -154,7 +154,10 @@ def benchmark(
     device: Optional[torch.device] = None,
 ) -> Dict[str, float]:
     """
-    Run full benchmark including generation metrics and quality metrics.
+    Run full benchmark including timing metrics and quality metrics.
+    
+    NOTE: TTFT/TPOT are now measured across ALL eval_tokens (not just max_new_tokens).
+    This provides more accurate timing for long sequence scenarios.
     
     Args:
         model: The language model
@@ -162,33 +165,22 @@ def benchmark(
         text: Input text
         compress_fn: Compression function (None for no compression)
         compress_kwargs: Additional kwargs for compress_fn
-        max_new_tokens: Number of tokens to generate for speed benchmark
-        eval_tokens: Number of tokens for PPL/Accuracy evaluation
+        max_new_tokens: (Deprecated, kept for compatibility) Number of tokens for old generation benchmark
+        eval_tokens: Number of tokens for evaluation (TTFT/TPOT now measured here!)
         skip_layers: Layer indices to skip compression
         device: Device to use
     
     Returns:
         Dict containing all metrics:
-        - ttft, tpot, throughput, total_time, num_tokens, input_length
+        - ttft, tpot, throughput, total_time (measured across eval_tokens)
         - perplexity, accuracy, eval_tokens, final_cache_size
     """
     if compress_kwargs is None:
         compress_kwargs = {}
     
-    # Measure generation metrics
-    gen_metrics = measure_generation_metrics(
-        model=model,
-        tokenizer=tokenizer,
-        text=text,
-        compress_fn=compress_fn,
-        compress_kwargs=compress_kwargs,
-        max_new_tokens=max_new_tokens,
-        skip_layers=skip_layers,
-        device=device,
-    )
-    
-    # Measure quality metrics (PPL and Accuracy)
-    qual_metrics = evaluate_with_compression(
+    # Measure ALL metrics in a single pass through eval_tokens
+    # This includes both quality metrics (PPL, Accuracy) and timing metrics (TTFT, TPOT)
+    metrics = evaluate_with_compression(
         model=model,
         tokenizer=tokenizer,
         text=text,
@@ -200,20 +192,18 @@ def benchmark(
         show_progress=True,
     )
     
-    # Combine metrics
+    # Return all metrics (timing now comes from the full evaluation)
     result = {
-        # Generation metrics
-        "ttft": gen_metrics["ttft"],
-        "tpot": gen_metrics["tpot"],
-        "throughput": gen_metrics["throughput"],
-        "total_time": gen_metrics["total_time"],
-        "num_generated": gen_metrics["num_tokens"],
-        "input_length": gen_metrics["input_length"],
+        # Timing metrics (measured across ALL eval_tokens)
+        "ttft": metrics["ttft"],
+        "tpot": metrics["tpot"],
+        "throughput": metrics["throughput"],
+        "total_time": metrics["total_time"],
         # Quality metrics
-        "perplexity": qual_metrics["perplexity"],
-        "accuracy": qual_metrics["accuracy"],
-        "eval_tokens": qual_metrics["num_tokens"],
-        "final_cache_size": qual_metrics["final_cache_size"],
+        "perplexity": metrics["perplexity"],
+        "accuracy": metrics["accuracy"],
+        "eval_tokens": metrics["num_tokens"],
+        "final_cache_size": metrics["final_cache_size"],
     }
     
     return result
@@ -286,10 +276,11 @@ def run_benchmark_suite(
         results.append(result)
         
         # Print results
-        print(f"\nGeneration Metrics:")
+        print(f"\nTiming Metrics (across {result['eval_tokens']} tokens):")
         print(f"  TTFT:       {result['ttft']:.4f} seconds")
         print(f"  TPOT:       {result['tpot']:.4f} seconds")
         print(f"  Throughput: {result['throughput']:.2f} tokens/sec")
+        print(f"  Total time: {result['total_time']:.2f} seconds")
         
         print(f"\nQuality Metrics:")
         print(f"  PPL:        {result['perplexity']:.2f}")
@@ -338,18 +329,24 @@ def print_benchmark_summary(results: List[Dict[str, float]]) -> None:
     
     # Print comparison with baseline
     if baseline and len(results) > 1:
-        print("\nComparison with baseline:")
+        print("\nComparison with baseline (Throughput ↑ better, TPOT ↓ better, PPL ↓ better):")
         for r in results:
             if r.get('method') == baseline.get('method'):
                 continue
             
-            ttft_imp = (1 - r['ttft'] / baseline['ttft']) * 100 if baseline['ttft'] > 0 else 0
+            # Throughput improvement (higher is better, positive means improvement)
+            throughput_imp = (r['throughput'] / baseline['throughput'] - 1) * 100 if baseline['throughput'] > 0 else 0
+            # TPOT improvement (lower is better, so we invert: positive means faster)
+            tpot_imp = (1 - r['tpot'] / baseline['tpot']) * 100 if baseline['tpot'] > 0 else 0
+            # PPL change (lower is better, so negative is improvement)
             ppl_change = (r['perplexity'] / baseline['perplexity'] - 1) * 100 if baseline['perplexity'] > 0 else 0
+            # Accuracy change (higher is better, positive is improvement)
             acc_change = (r['accuracy'] / baseline['accuracy'] - 1) * 100 if baseline['accuracy'] > 0 else 0
             
             method_name = r.get('method', 'unknown')
             print(f"  {method_name}: "
-                  f"TTFT {ttft_imp:+.1f}%, "
+                  f"Throughput {throughput_imp:+.1f}%, "
+                  f"TPOT {tpot_imp:+.1f}%, "
                   f"PPL {ppl_change:+.1f}%, "
                   f"Acc {acc_change:+.1f}%")
 

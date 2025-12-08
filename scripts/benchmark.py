@@ -397,13 +397,15 @@ Examples:
     # Find baseline for comparison
     baseline_ppl = None
     baseline_acc = None
-    baseline_ttft = None
+    baseline_throughput = None
+    baseline_tpot = None
     
     if 'baseline' in grouped:
         baseline_results = grouped['baseline']
         baseline_ppl = np.mean([r['perplexity'] for r in baseline_results])
         baseline_acc = np.mean([r['accuracy'] for r in baseline_results])
-        baseline_ttft = np.mean([r['ttft'] for r in baseline_results])
+        baseline_throughput = np.mean([r['throughput'] for r in baseline_results])
+        baseline_tpot = np.mean([r['tpot'] for r in baseline_results])
     
     # Print results
     for method, results in grouped.items():
@@ -421,20 +423,24 @@ Examples:
     
     # Print comparison with baseline
     if baseline_ppl is not None and len(grouped) > 1:
-        print("\nComparison with baseline:")
+        print("\nComparison with baseline (Throughput ↑ better, TPOT ↓ better, PPL ↓ better):")
         for method, results in grouped.items():
             if method == 'baseline':
                 continue
             
-            avg_ttft = np.mean([r['ttft'] for r in results])
+            avg_throughput = np.mean([r['throughput'] for r in results])
+            avg_tpot = np.mean([r['tpot'] for r in results])
             avg_ppl = np.mean([r['perplexity'] for r in results])
             avg_acc = np.mean([r['accuracy'] for r in results])
             
-            ttft_imp = (1 - avg_ttft / baseline_ttft) * 100 if baseline_ttft > 0 else 0
+            # Throughput improvement (higher is better)
+            throughput_imp = (avg_throughput / baseline_throughput - 1) * 100 if baseline_throughput > 0 else 0
+            # TPOT improvement (lower is better)
+            tpot_imp = (1 - avg_tpot / baseline_tpot) * 100 if baseline_tpot > 0 else 0
             ppl_change = (avg_ppl / baseline_ppl - 1) * 100 if baseline_ppl > 0 else 0
             acc_change = (avg_acc / baseline_acc - 1) * 100 if baseline_acc > 0 else 0
             
-            print(f"  {method}: TTFT {ttft_imp:+.1f}%, PPL {ppl_change:+.1f}%, Acc {acc_change:+.1f}%")
+            print(f"  {method}: Throughput {throughput_imp:+.1f}%, TPOT {tpot_imp:+.1f}%, PPL {ppl_change:+.1f}%, Acc {acc_change:+.1f}%")
     
     print("\nBenchmark completed!")
 

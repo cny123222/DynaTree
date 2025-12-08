@@ -83,3 +83,77 @@ python scripts/benchmark.py --method streaming_llm \
     --num_samples 3
 
 
+Testing: baseline
+============================================================
+PPL: 638.30, Acc: 17.53%: 100%|███████████████████████████████████████████████████████████████████████| 9999/9999 [03:07<00:00, 53.20it/s]
+
+Generation Metrics:
+  TTFT:       0.0238 seconds
+  TPOT:       0.0053 seconds
+  Throughput: 186.87 tokens/sec
+
+Quality Metrics:
+  PPL:        638.30
+  Accuracy:   17.53%
+  Cache size: 9999 tokens
+
+============================================================
+Testing: streaming_256
+============================================================
+PPL: 604.37, Acc: 17.40%: 100%|██████████████████████████████████████████████████████████████████████| 9999/9999 [01:29<00:00, 111.84it/s]
+
+Generation Metrics:
+  TTFT:       0.1820 seconds
+  TPOT:       0.0089 seconds
+  Throughput: 107.64 tokens/sec
+python scripts/benchmark.py --method streaming_llm \
+    --max_tokens 30000 \
+    --recent_sizes 252,508,1020 \
+    --num_samples 10 --num_warmup 20
+======================================================================
+KV Cache Compression Benchmark
+======================================================================
+
+Configuration:
+  Model: EleutherAI/pythia-70m-deduped
+  Method: streaming_llm
+  Skip layers: [0, 1]
+  Number of samples: 10
+  Max eval tokens: 30000
+  Max new tokens: 500
+  Warmup iterations: 20
+Loading model: EleutherAI/pythia-70m-deduped
+Using device: mps
+
+Performing 20 warmup iterations...
+  Warmup 1/20 completed
+  Warmup 2/20 completed
+  Warmup 3/20 completed
+  Warmup 4/20 completed
+  Warmup 5/20 completed
+  Warmup 6/20 completed
+  Warmup 7/20 completed
+  Warmup 8/20 completed
+  Warmup 9/20 completed
+  Warmup 10/20 completed
+  Warmup 11/20 completed
+  Warmup 12/20 completed
+  Warmup 13/20 completed
+  Warmup 14/20 completed
+  Warmup 15/20 completed
+  Warmup 16/20 completed
+  Warmup 17/20 completed
+  Warmup 18/20 completed
+  Warmup 19/20 completed
+  Warmup 20/20 completed
+  ================================================================================
+AGGREGATED RESULTS (averaged across samples)
+================================================================================
+
+Method                       TTFT(s)    TPOT(s)    Thruput        PPL        Acc    Cache
+------------------------------------------------------------------------------------------
+baseline                      0.0074     0.0100      96.25    1646.10     10.97%    27313
+streaming_256                 0.0075     0.0086     104.19    2906.07     10.30%    27313
+streaming_512                 0.0066     0.0085     105.72    2865.64     10.43%    27313
+streaming_1024                0.0066     0.0085     106.10    2845.13     10.49%    27313
+==========================================================================================
