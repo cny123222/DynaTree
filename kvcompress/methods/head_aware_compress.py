@@ -662,12 +662,17 @@ class HeadAwareMaskGenerator:
             head_type = c['head_type']
             
             # Get window size for this head type
-            # Use recommended_window from classification if available and positive
-            recommended = c.get('recommended_window', -1)
-            if recommended > 0:
-                window_size = recommended
+            # Priority: 1) window_size_override, 2) recommended_window, 3) default
+            if window_size_override and head_type in window_size_override:
+                # User-specified override takes highest priority
+                window_size = window_size_override[head_type]
             else:
-                window_size = window_sizes.get(head_type, 64)
+                # Use recommended_window from classification if available and positive
+                recommended = c.get('recommended_window', -1)
+                if recommended > 0:
+                    window_size = recommended
+                else:
+                    window_size = window_sizes.get(head_type, 64)
             
             generator.head_configs[(layer_idx, head_idx)] = {
                 'head_type': head_type,
@@ -729,6 +734,94 @@ class HeadAwareMaskGenerator:
             'sink_size': self.default_sink_size,
             'window_size': self.default_window_size,
         }
+    
+    def get_aggregated_head_config(self, head_idx: int) -> Dict:
+        """
+        Get aggregated configuration for a head position across all layers.
+        
+        Since HuggingFace applies the same attention mask to all layers,
+        we need a single config per head position that represents its
+        behavior across all layers. We use the MOST COMMON head type
+        for each position.
+        
+        Args:
+            head_idx: Head index (0 to num_heads-1)
+        
+        Returns:
+            Dict with aggregated head config
+        """
+        # Count head types for this position across all layers
+        type_counts: Dict[str, int] = {}
+        type_configs: Dict[str, Dict] = {}
+        
+        for layer_idx in range(self.num_layers):
+            config = self.get_head_config(layer_idx, head_idx)
+            head_type = config['head_type']
+            type_counts[head_type] = type_counts.get(head_type, 0) + 1
+            type_configs[head_type] = config  # Keep last seen config for this type
+        
+        # Find most common type
+        most_common_type = max(type_counts.keys(), key=lambda t: type_counts[t])
+        
+        # Return config for most common type
+        return type_configs[most_common_type]
+    
+    def generate_aggregated_mask(
+        self,
+        seq_len: int,
+        device: Union[torch.device, str] = 'cpu',
+        dtype: torch.dtype = torch.float32,
+    ) -> torch.Tensor:
+        """
+        Generate a 4D attention mask using aggregated head configs.
+        
+        Since HuggingFace applies the same mask to all layers, this method
+        creates a mask based on the most common head type for each head
+        position across all layers. This ensures the mask reflects the
+        actual head type distribution.
+        
+        Args:
+            seq_len: Sequence length
+            device: Device to create mask on
+            dtype: Data type for mask
+        
+        Returns:
+            Attention mask of shape (1, num_heads, seq_len, seq_len)
+        """
+        if isinstance(device, str):
+            device = torch.device(device)
+        
+        masks = []
+        
+        for head_idx in range(self.num_heads):
+            config = self.get_aggregated_head_config(head_idx)
+            head_type = config['head_type']
+            sink_size = config['sink_size']
+            window_size = config['window_size']
+            
+            if head_type == 'dead':
+                # Dead heads: mask everything except current token
+                mask = torch.full((seq_len, seq_len), float('-inf'), device=device, dtype=dtype)
+                for i in range(seq_len):
+                    mask[i, i] = 0.0
+            elif window_size < 0 or head_type == 'gathering':
+                # Full context: standard causal mask
+                mask = self._create_causal_mask(seq_len, device, dtype)
+            else:
+                # Sink + window mask
+                mask = self._create_sink_window_mask(
+                    seq_len, sink_size, window_size, device, dtype
+                )
+            
+            masks.append(mask)
+        
+        # Stack to create (num_heads, seq_len, seq_len)
+        layer_mask = torch.stack(masks, dim=0)
+        
+        # Add batch dimension: (1, num_heads, seq_len, seq_len)
+        layer_mask = layer_mask.unsqueeze(0)
+        
+        return layer_mask
     
     def _create_causal_mask(
         self,
@@ -893,7 +986,11 @@ class HeadAwareMaskGenerator:
         self._mask_cache.clear()
     
     def get_summary(self) -> Dict:
-        """Get a summary of the mask generator configuration."""
+        """Get a summary of the mask generator configuration.
+        
+        Now uses per-layer configs since we inject per-layer masks via hooks.
+        """
+        # Count head types across all layers
         type_counts: Dict[str, int] = {}
         total_effective_context = 0
         
@@ -911,14 +1008,14 @@ class HeadAwareMaskGenerator:
                 effective = sink_size + window_size
             total_effective_context += effective
         
-        num_configured = len(self.head_configs)
-        avg_effective = total_effective_context / num_configured if num_configured > 0 else 0
+        total_heads = self.num_layers * self.num_heads
+        avg_effective = total_effective_context / total_heads if total_heads > 0 else 0
         
         return {
             'num_layers': self.num_layers,
             'num_heads': self.num_heads,
-            'total_heads': self.num_layers * self.num_heads,
-            'configured_heads': num_configured,
+            'total_heads': total_heads,
+            'configured_heads': len(self.head_configs),
             'head_type_distribution': type_counts,
             'average_effective_context': avg_effective,
             'default_sink_size': self.default_sink_size,

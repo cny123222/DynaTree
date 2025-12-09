@@ -13,8 +13,9 @@ Key implementation points:
 6. TTFT/TPOT measured across ALL tokens (not just initial generation)
 
 Extended features:
-- evaluate_with_head_aware_mask: Uses 4D attention masks to simulate per-head 
-  different attention windows WITHOUT modifying KV cache (for validation)
+- evaluate_with_head_aware_mask: Uses per-layer 4D attention masks to simulate 
+  per-head different attention windows WITHOUT modifying KV cache (for validation)
+- Per-layer mask injection via forward hooks for true head-aware masking
 """
 
 import time
@@ -26,6 +27,96 @@ from transformers import DynamicCache
 
 from .utils import to_dynamic_cache, normalize_kv_cache
 from .methods.head_aware_compress import HeadAwareMaskGenerator
+
+
+class PerLayerMaskInjector:
+    """
+    Injects per-layer attention masks into GPT-NeoX model using forward hooks.
+    
+    This allows different layers to use different attention masks based on
+    their specific head type configurations.
+    """
+    
+    def __init__(self, model, mask_generator: HeadAwareMaskGenerator, device, dtype):
+        self.model = model
+        self.mask_generator = mask_generator
+        self.device = device
+        self.dtype = dtype
+        self.hooks = []
+        self.current_seq_len = 0
+        self.use_incremental = False  # Whether we're in incremental decoding mode
+        self._layer_masks = {}  # Cache for current seq_len
+        self.verbose = False  # Set to True to enable logging
+        
+    def _get_layer_mask(self, layer_idx: int) -> torch.Tensor:
+        """Get or create mask for a specific layer."""
+        if layer_idx not in self._layer_masks:
+            mask = self.mask_generator.generate_layer_mask(
+                layer_idx=layer_idx,
+                seq_len=self.current_seq_len,
+                device=self.device,
+                dtype=self.dtype,
+                use_cache=False,
+            )
+            self._layer_masks[layer_idx] = mask
+        return self._layer_masks[layer_idx]
+    
+    def _create_hook(self, layer_idx: int):
+        """Create a forward pre-hook for a specific layer."""
+        def hook(module, args, kwargs):
+            # Get the layer-specific mask
+            mask = self._get_layer_mask(layer_idx)
+            
+            # For incremental decoding, extract the last row
+            if self.use_incremental and mask.shape[2] > 1:
+                mask = mask[:, :, -1:, :]
+            
+            # Inject the mask into kwargs
+            kwargs['attention_mask'] = mask
+            
+            return args, kwargs
+        
+        return hook
+    
+    def update_seq_len(self, seq_len: int, incremental: bool = False):
+        """Update sequence length and clear mask cache."""
+        self.current_seq_len = seq_len
+        self.use_incremental = incremental
+        self._layer_masks.clear()  # Clear cache when seq_len changes
+    
+    def register_hooks(self):
+        """Register forward hooks on all attention layers."""
+        self.remove_hooks()  # Remove any existing hooks
+        
+        for layer_idx, layer in enumerate(self.model.gpt_neox.layers):
+            hook = layer.attention.register_forward_pre_hook(
+                self._create_hook(layer_idx),
+                with_kwargs=True
+            )
+            self.hooks.append(hook)
+        
+        if self.verbose:
+            print(f"[PerLayerMaskInjector] Registered {len(self.hooks)} hooks")
+    
+    def remove_hooks(self):
+        """Remove all registered hooks."""
+        for hook in self.hooks:
+            hook.remove()
+        self.hooks.clear()
+    
+    def log_mask_summary(self):
+        """Log a summary of masks for each layer (for debugging)."""
+        if not self.verbose:
+            return
+            
+        print(f"\n[PerLayerMaskInjector] Mask summary for seq_len={self.current_seq_len}:")
+        for layer_idx in range(self.mask_generator.num_layers):
+            config_summary = {}
+            for head_idx in range(self.mask_generator.num_heads):
+                config = self.mask_generator.get_head_config(layer_idx, head_idx)
+                t = config['head_type']
+                config_summary[t] = config_summary.get(t, 0) + 1
+            print(f"  Layer {layer_idx}: {config_summary}")
 
 
 def evaluate_with_compression(
@@ -454,80 +545,86 @@ def evaluate_with_head_aware_mask(
     # Clear any existing mask cache to avoid memory buildup
     mask_generator.clear_cache()
     
-    with torch.inference_mode():
-        for idx in token_range:
-            token_start = time.perf_counter()
-            
-            # Current token (single token input)
-            current_token = input_ids[:, idx:idx+1]
-            
-            # Target token (next token)
-            target = input_ids[:, idx+1:idx+2].view(-1)
-            
-            # Current sequence length (including past)
-            current_seq_len = idx + 1
-            
-            # Generate head-aware attention mask for current sequence length
-            # IMPORTANT: Disable caching since seq_len changes every iteration
-            # Caching would cause memory to grow unboundedly
-            # We only need the mask for the current query position (last row)
-            attention_mask = mask_generator.generate_layer_mask(
-                layer_idx=0,  # Use layer 0 pattern (applied uniformly by HF)
-                seq_len=current_seq_len,
-                device=device,
-                dtype=mask_dtype,
-                use_cache=False,  # CRITICAL: Don't cache to avoid OOM
-            )
-            
-            # For autoregressive with past_key_values, we only pass the current token
-            # but the attention mask should cover the full sequence
-            # HuggingFace expects (batch, 1, 1, seq_len) for incremental decoding
-            # We'll use the last row of our full mask
-            if past_key_values is not None:
-                # Extract mask for the current query position (last row)
-                # Shape: (1, num_heads, 1, current_seq_len)
-                attention_mask = attention_mask[:, :, -1:, :]
-            
-            # Forward pass with custom attention mask
-            outputs = model(
-                current_token,
-                attention_mask=attention_mask,
-                past_key_values=past_key_values,
-                use_cache=True,
-            )
-            
-            # Explicitly delete mask to free GPU memory
-            del attention_mask
-            
-            # Get logits for next token prediction
-            logits = outputs.logits[:, -1, :].view(-1, model.config.vocab_size)
-            
-            # Calculate NLL for this token
-            nll = loss_fn(logits, target)
-            nlls.append(nll.item())
-            
-            # Calculate accuracy
-            predicted = torch.argmax(logits, dim=-1)
-            num_correct.append((predicted == target).int().item())
-            
-            # Get KV cache from outputs (keep full, no compression)
-            past_key_values = outputs.past_key_values
-            
-            # Record timing
-            token_time = time.perf_counter() - token_start
-            token_times.append(token_time)
-            
-            # Record TTFT (first token time)
-            if ttft is None:
-                ttft = token_time
-            
-            # Update progress bar
-            if show_progress:
-                current_ppl = torch.exp(torch.tensor(nlls).mean()).item()
-                current_acc = sum(num_correct) / len(num_correct)
-                token_range.set_description(
-                    f"PPL: {current_ppl:.2f}, Acc: {current_acc:.2%}"
+    # Create per-layer mask injector
+    # This uses forward hooks to inject different masks into each layer
+    mask_injector = PerLayerMaskInjector(model, mask_generator, device, mask_dtype)
+    mask_injector.verbose = show_progress  # Enable logging if showing progress
+    mask_injector.register_hooks()
+    
+    # Log mask configuration for first few layers (once at start)
+    if show_progress:
+        print("\n[Per-Layer Mask Config] Head type distribution per layer:")
+        for layer_idx in range(min(5, num_layers)):  # Show first 5 layers
+            type_counts = {}
+            for head_idx in range(num_heads):
+                config = mask_generator.get_head_config(layer_idx, head_idx)
+                t = config['head_type']
+                w = config['window_size']
+                key = f"{t}(w={w})"
+                type_counts[key] = type_counts.get(key, 0) + 1
+            types_str = ", ".join(f"{k}:{v}" for k, v in sorted(type_counts.items()))
+            print(f"  Layer {layer_idx}: {types_str}")
+        if num_layers > 5:
+            print(f"  ... (showing first 5 of {num_layers} layers)")
+        print()
+    
+    try:
+        with torch.inference_mode():
+            for idx in token_range:
+                token_start = time.perf_counter()
+                
+                # Current token (single token input)
+                current_token = input_ids[:, idx:idx+1]
+                
+                # Target token (next token)
+                target = input_ids[:, idx+1:idx+2].view(-1)
+                
+                # Current sequence length (including past)
+                current_seq_len = idx + 1
+                
+                # Update mask injector with current sequence length
+                # The hooks will inject layer-specific masks during forward pass
+                mask_injector.update_seq_len(current_seq_len, incremental=(past_key_values is not None))
+                
+                # Forward pass - masks are injected via hooks, so we don't pass attention_mask
+                outputs = model(
+                    current_token,
+                    past_key_values=past_key_values,
+                    use_cache=True,
                 )
+                
+                # Get logits for next token prediction
+                logits = outputs.logits[:, -1, :].view(-1, model.config.vocab_size)
+                
+                # Calculate NLL for this token
+                nll = loss_fn(logits, target)
+                nlls.append(nll.item())
+                
+                # Calculate accuracy
+                predicted = torch.argmax(logits, dim=-1)
+                num_correct.append((predicted == target).int().item())
+                
+                # Get KV cache from outputs (keep full, no compression)
+                past_key_values = outputs.past_key_values
+                
+                # Record timing
+                token_time = time.perf_counter() - token_start
+                token_times.append(token_time)
+                
+                # Record TTFT (first token time)
+                if ttft is None:
+                    ttft = token_time
+                
+                # Update progress bar
+                if show_progress:
+                    current_ppl = torch.exp(torch.tensor(nlls).mean()).item()
+                    current_acc = sum(num_correct) / len(num_correct)
+                    token_range.set_description(
+                        f"PPL: {current_ppl:.2f}, Acc: {current_acc:.2%}"
+                    )
+    finally:
+        # Always remove hooks to avoid memory leaks
+        mask_injector.remove_hooks()
     
     total_time = time.perf_counter() - total_start
     
