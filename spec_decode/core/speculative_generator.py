@@ -57,9 +57,19 @@ class SpeculativeGenerator:
         self.K = K
         self.max_len = max_len
         
-        # Store models
-        self.target_model = target_model.to(device)
-        self.draft_model = draft_model.to(device)
+        # Store models - handle quantized models that cannot be moved with .to()
+        try:
+            self.target_model = target_model.to(device)
+        except (ValueError, RuntimeError):
+            # INT8/INT4 quantized models cannot be moved, use as-is
+            self.target_model = target_model
+            
+        try:
+            self.draft_model = draft_model.to(device)
+        except (ValueError, RuntimeError):
+            # INT8/INT4 quantized models cannot be moved, use as-is
+            self.draft_model = draft_model
+            
         self.tokenizer = tokenizer
         
         # Ensure pad token is set
