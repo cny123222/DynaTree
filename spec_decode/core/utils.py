@@ -92,3 +92,4 @@ def warmup_model(model: torch.nn.Module, tokenizer, device: str = "cuda", num_wa
         torch.cuda.synchronize()
 
 
+

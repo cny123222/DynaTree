@@ -273,12 +273,133 @@ def test_acceptance_rate(
     return success, errors
 
 
+def test_batch_forward_cache_consistency(
+    target_model,
+    tokenizer,
+    device: str
+) -> Tuple[bool, List[str]]:
+    """
+    Test that batch forward produces the same cache as sequential token-by-token forward.
+    
+    This verifies that our batch cache update optimization is correct.
+    """
+    print("\n" + "="*60)
+    print("TEST 5: Batch Forward Cache Consistency")
+    print("="*60)
+    
+    errors = []
+    
+    prompt = "The quick brown fox jumps over the lazy"
+    tokens_to_test = ["dog", "cat", "bird"]  # Multiple tokens to add
+    
+    # Tokenize prompt
+    inputs = tokenizer(prompt, return_tensors="pt").to(device)
+    input_ids = inputs.input_ids
+    
+    # Get additional tokens
+    additional_tokens = tokenizer(" " + " ".join(tokens_to_test), return_tensors="pt").input_ids.to(device)
+    additional_tokens = additional_tokens[:, 1:]  # Remove BOS if present
+    
+    print(f"\nPrompt length: {input_ids.shape[1]}")
+    print(f"Additional tokens: {additional_tokens.shape[1]}")
+    
+    with torch.inference_mode():
+        # Method 1: Sequential forward (token by token)
+        outputs_seq = target_model(input_ids, use_cache=True, return_dict=True)
+        cache_seq = outputs_seq.past_key_values
+        logits_seq_list = [outputs_seq.logits[:, -1:, :]]
+        
+        for i in range(additional_tokens.shape[1]):
+            token = additional_tokens[:, i:i+1]
+            outputs_seq = target_model(
+                token, 
+                past_key_values=cache_seq, 
+                use_cache=True, 
+                return_dict=True
+            )
+            cache_seq = outputs_seq.past_key_values
+            logits_seq_list.append(outputs_seq.logits)
+        
+        logits_sequential = torch.cat(logits_seq_list, dim=1)
+        
+        # Method 2: Batch forward (all at once)
+        outputs_batch_init = target_model(input_ids, use_cache=True, return_dict=True)
+        cache_batch = outputs_batch_init.past_key_values
+        
+        outputs_batch = target_model(
+            additional_tokens,
+            past_key_values=cache_batch,
+            use_cache=True,
+            return_dict=True
+        )
+        cache_batch = outputs_batch.past_key_values
+        logits_batch = torch.cat([
+            outputs_batch_init.logits[:, -1:, :],
+            outputs_batch.logits
+        ], dim=1)
+    
+    # Compare cache lengths
+    seq_len_seq = cache_seq.get_seq_length()
+    seq_len_batch = cache_batch.get_seq_length()
+    
+    print(f"\nSequential cache length: {seq_len_seq}")
+    print(f"Batch cache length: {seq_len_batch}")
+    
+    if seq_len_seq == seq_len_batch:
+        print("✅ Cache lengths match")
+    else:
+        print("❌ Cache lengths differ!")
+        errors.append(f"Cache lengths differ: {seq_len_seq} vs {seq_len_batch}")
+    
+    # Compare logits (should produce same predictions)
+    seq_preds = logits_sequential.argmax(dim=-1)
+    batch_preds = logits_batch.argmax(dim=-1)
+    
+    print(f"\nSequential predictions: {seq_preds}")
+    print(f"Batch predictions: {batch_preds}")
+    
+    if torch.equal(seq_preds, batch_preds):
+        print("✅ Predictions match")
+    else:
+        print("❌ Predictions differ!")
+        errors.append("Predictions differ between sequential and batch forward")
+    
+    # Compare cache content (sample check on first layer)
+    # DynamicCache stores as list of (key, value) tuples or has different access pattern
+    try:
+        # Try new-style access (key_cache/value_cache attributes)
+        if hasattr(cache_seq, 'key_cache'):
+            k_seq = cache_seq.key_cache[0]
+            k_batch = cache_batch.key_cache[0]
+        else:
+            # Fallback: access via indexing or to_legacy_cache
+            cache_seq_legacy = cache_seq.to_legacy_cache() if hasattr(cache_seq, 'to_legacy_cache') else cache_seq
+            cache_batch_legacy = cache_batch.to_legacy_cache() if hasattr(cache_batch, 'to_legacy_cache') else cache_batch
+            k_seq = cache_seq_legacy[0][0]
+            k_batch = cache_batch_legacy[0][0]
+        
+        # Check if they're close (allowing for floating point differences)
+        if torch.allclose(k_seq, k_batch, atol=1e-4, rtol=1e-4):
+            print("✅ Cache content matches (within tolerance)")
+        else:
+            max_diff = (k_seq - k_batch).abs().max().item()
+            print(f"⚠️ Cache content differs (max diff: {max_diff:.6f})")
+            if max_diff > 1e-2:
+                errors.append(f"Cache content differs significantly: max_diff={max_diff}")
+    except Exception as e:
+        print(f"⚠️ Could not compare cache content directly: {e}")
+        print("   Skipping detailed cache comparison (predictions already verified)")
+    
+    success = len(errors) == 0
+    return success, errors
+
+
 def test_static_cache():
     """
     Test StaticKVCache functionality independently.
     """
     print("\n" + "="*60)
-    print("TEST 5: StaticKVCache Unit Tests")
+    print("TEST 6: StaticKVCache Unit Tests")
     print("="*60)
     
     errors = []
@@ -356,7 +477,7 @@ def main():
     all_passed = True
     all_errors = []
     
-    # Test 5: Static cache (no model needed)
+    # Test 6: Static cache (no model needed)
     success, errors = test_static_cache()
     all_passed = all_passed and success
     all_errors.extend(errors)
@@ -403,6 +524,13 @@ def main():
     # Test 4: Acceptance rate
     success, errors = test_acceptance_rate(
         target_model, draft_model, tokenizer, args.device, prompts
+    )
+    all_passed = all_passed and success
+    all_errors.extend(errors)
+    
+    # Test 5: Batch forward cache consistency (critical for optimization)
+    success, errors = test_batch_forward_cache_consistency(
+        target_model, tokenizer, args.device
     )
     all_passed = all_passed and success
     all_errors.extend(errors)
