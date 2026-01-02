@@ -210,30 +210,39 @@ def benchmark_tree_spec_decode(
     max_new_tokens: int = 100,
     tree_depth: int = 4,
     branch_factor: int = 2,
+    probability_threshold: float = 0.0,
     device: str = "cuda",
     use_v2: bool = False
 ) -> Dict:
     """Benchmark tree-based speculative decoding."""
     GeneratorClass = TreeSpeculativeGeneratorV2 if use_v2 else TreeSpeculativeGenerator
     
-    generator = GeneratorClass(
-        target_model=target_model,
-        draft_model=draft_model,
-        tokenizer=tokenizer,
-        tree_depth=tree_depth,
-        branch_factor=branch_factor,
-        device=device,
-        use_compile=False
-    )
+    # Build kwargs based on version
+    generator_kwargs = {
+        "target_model": target_model,
+        "draft_model": draft_model,
+        "tokenizer": tokenizer,
+        "tree_depth": tree_depth,
+        "branch_factor": branch_factor,
+        "device": device,
+        "use_compile": False
+    }
+    
+    # V2 supports probability threshold
+    if use_v2:
+        generator_kwargs["probability_threshold"] = probability_threshold
+    
+    generator = GeneratorClass(**generator_kwargs)
     
     method_name = f"Tree (D={tree_depth}, B={branch_factor})"
     if use_v2:
-        method_name += " V2"
+        method_name += f" V2 (τ={probability_threshold})"
     
     results = {
         "method": method_name,
         "tree_depth": tree_depth,
         "branch_factor": branch_factor,
+        "probability_threshold": probability_threshold if use_v2 else None,
         "latencies": [],
         "throughputs": [],
         "acceptance_rates": [],
@@ -394,11 +403,15 @@ def run_comprehensive_benchmark(
     print(f"  Speedup vs Baseline: {tree_results['avg_throughput'] / baseline_results['avg_throughput']:.2f}x")
     print(f"  Speedup vs Linear: {tree_results['avg_throughput'] / max(0.1, linear_results['avg_throughput']):.2f}x")
     
-    # 5. Tree V2 (with pruning)
-    print("\n[5/5] Benchmarking Tree V2 Speculative Decoding (D=4, B=3)...")
+    # 5. Tree V2 (with pruning) - Using optimal parameters from actual experiments
+    # Note: Optimal params vary by sequence length (see papers/Tree_Speculative_Decoding_实验报告.md)
+    # For 100 tokens: D=7, B=3, τ=0.03
+    # For 500 tokens: D=8, B=3, τ=0.03
+    print("\n[5/5] Benchmarking Tree V2 Speculative Decoding (D=8, B=3, τ=0.03)...")
     tree_v2_results = benchmark_tree_spec_decode(
         target_model, draft_model, tokenizer, prompts, max_new_tokens,
-        tree_depth=4, branch_factor=3, device=device, use_v2=True
+        tree_depth=8, branch_factor=3, probability_threshold=0.03, 
+        device=device, use_v2=True
     )
     all_results["results"].append(tree_v2_results)
     print(f"  Throughput: {tree_v2_results['avg_throughput']:.1f} tokens/s")

@@ -1,0 +1,28 @@
+# LLM Efficient Reasoning - Requirements
+# Python 3.9+
+
+# Core Dependencies
+torch>=2.0.0
+transformers>=4.38.0
+accelerate>=0.25.0
+
+# Data Processing
+datasets>=2.14.0
+numpy>=1.24.0
+pandas>=2.0.0
+pyarrow>=12.0.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Utilities
+tqdm>=4.65.0
+sentencepiece>=0.1.99
+
+# Optional: Quantization Support
+bitsandbytes>=0.41.0
+
+# Optional: Better Performance
+einops>=0.7.0
+
