@@ -293,7 +293,7 @@ Static (max=64) & XX t/s & XX× & 64 & ~3.0 \\
 - 标注哪条路径被接受
 - 显示概率值
 
-**创建方式**:
+**创建方式**:                   v bhc
 ```python
 # 需要创建可视化脚本
 python spec_decode/visualize_tree_case.py \

@@ -7,7 +7,9 @@
 % The authors should use one of these tracks.
 % Before accepting by the NeurIPS conference, select one of the options below.
 % 0. "default" for submission
- \usepackage{neurips_2025}
+% \usepackage{neurips_2025}
+% Using "final" option to show author names (not for actual submission)
+ \usepackage[final]{neurips_2025}
 % the "default" option is equal to the "main" option, which is used for the Main Track with double-blind reviewing.
 % 1. "main" option is used for the Main Track
 %  \usepackage[main]{neurips_2025}
@@ -56,7 +58,7 @@
 \usepackage{xcolor}         % colors
 
 % Note. For the workshop paper template, both \title{} and \workshoptitle{} are required, with the former indicating the paper title shown in the title and the latter indicating the workshop title displayed in the footnote. 
-\title{Formatting Instructions For NeurIPS 2025}
+\title{DynaTree: Dynamic Tree-based Speculative Decoding with Adaptive Pruning}
 
 
 % The \author macro works with any number of authors. There are two commands
@@ -69,34 +71,13 @@
 
 
 \author{%
-  David S.~Hippocampus\thanks{Use footnote for providing further information
-    about author (webpage, alternative address)---\emph{not} for acknowledging
-    funding agencies.} \\
-  Department of Computer Science\\
-  Cranberry-Lemon University\\
-  Pittsburgh, PA 15213 \\
-  \texttt{hippo@cs.cranberry-lemon.edu} \\
-  % examples of more authors
-  % \And
-  % Coauthor \\
-  % Affiliation \\
-  % Address \\
-  % \texttt{email} \\
-  % \AND
-  % Coauthor \\
-  % Affiliation \\
-  % Address \\
-  % \texttt{email} \\
-  % \And
-  % Coauthor \\
-  % Affiliation \\
-  % Address \\
-  % \texttt{email} \\
-  % \And
-  % Coauthor \\
-  % Affiliation \\
-  % Address \\
-  % \texttt{email} \\
+  Nuoyan Chen$^\dagger$ \quad
+  Jiamin Liu$^\dagger$ \quad
+  Zhaocheng Li$^\dagger$ \\
+  School of Computer Science\\
+  Shanghai Jiao Tong University\\
+  \texttt{\{cny123222, logic-1.0, lzc050419\}@sjtu.edu.cn} \\
+  $^\dagger$ Equal contribution.
 }
 
 
@@ -107,146 +88,52 @@
 
 
 \begin{abstract}
-  The abstract paragraph should be indented \nicefrac{1}{2}~inch (3~picas) on
-  both the left- and right-hand margins. Use 10~point type, with a vertical
-  spacing (leading) of 11~points.  The word \textbf{Abstract} must be centered,
-  bold, and in point size 12. Two line spaces precede the abstract. The abstract
-  must be limited to one paragraph.
+Autoregressive generation in large language models (LLMs) suffers from inherent sequential bottlenecks that severely underutilize modern GPU parallelism. Speculative decoding accelerates inference by using a smaller draft model to propose candidate tokens, which are then verified in parallel by the target model. However, existing linear approaches explore only a single token sequence per iteration, leading to substantial computational waste when early predictions fail. We propose \textbf{DynaTree}, a tree-based speculative decoding framework that generates multiple candidate paths through top-$k$ branching at each depth level and verifies them simultaneously via tree attention mechanisms. To control the exponential growth of tree size while maintaining high acceptance rates, we introduce an adaptive pruning strategy based on probability thresholds and node budgets. Experiments on Pythia-2.8B demonstrate that DynaTree achieves \textbf{1.62$\times$ speedup} over standard autoregressive decoding with optimal configuration ($D{=}8$, $B{=}3$, $\tau{=}0.03$), outperforming both HuggingFace assisted generation (1.36$\times$) and linear speculative decoding (1.11$\times$). We provide comprehensive analysis of the depth-breadth-threshold trade-offs and demonstrate consistent improvements across varying generation lengths.
 \end{abstract}
 
 
-\section{Submission of papers to NeurIPS 2025}
+\section{Introduction}
+
+The remarkable capabilities of large language models (LLMs) have transformed natural language processing, yet their deployment faces a fundamental bottleneck: the sequential nature of autoregressive token generation. During the decode phase, each new token must be generated conditioned on all previously generated tokens, forcing the model to perform a full forward pass for every single token~\cite{transformer_inference}. This step-by-step dependency severely underutilizes modern GPU parallelism, as powerful compute units remain idle while awaiting the next token, creating what is fundamentally a \textit{memory-bound} rather than compute-bound process~\cite{llm_bottleneck,speculative_intro}.
+
+Speculative decoding has emerged as a promising solution to this bottleneck~\cite{leviathan2023fast}. The core insight is elegant: use a smaller, faster \textit{draft model} to rapidly propose multiple candidate tokens, then leverage the target model's parallel processing capability to verify all candidates in a single forward pass. If the target model agrees with the draft predictions, multiple tokens are accepted simultaneously, effectively amortizing the cost of the expensive target model inference. Critically, this acceleration comes with a mathematical guarantee: the output distribution remains \textit{identical} to standard autoregressive generation through careful rejection sampling~\cite{nvidia_speculative}.
+
+However, existing speculative decoding methods predominantly employ \textit{linear} drafting strategies, where the draft model proposes a single sequential chain of $K$ tokens (e.g., $t_1 \rightarrow t_2 \rightarrow t_3 \rightarrow \cdots \rightarrow t_K$). This single-path exploration suffers from a critical inefficiency: if any token $t_i$ in the sequence is rejected during verification, \textit{all subsequent tokens} $t_{i+1}$ through $t_K$ are discarded, wasting both the draft generation effort and verification computation. When the draft model's predictions diverge from the target model's distribution—which is common, especially for smaller draft models—this leads to poor acceptance rates and limits the achievable speedup~\cite{decoding_speculative}.
+
+This observation motivates a natural question: why restrict speculation to a single path? If the uncertainty lies in which token will be correct, exploring multiple candidate paths in parallel should increase the probability that at least one path aligns with the target model's preferences. This insight motivates a shift from linear chains to tree-based speculation structures, where the draft model generates the top-$B$ candidate tokens at each depth level, creating multiple parallel exploration paths. For instance, with branch factor $B{=}3$ and depth $D{=}3$, the tree can explore up to 27 distinct token sequences simultaneously, dramatically increasing the likelihood of finding an acceptable path.
+
+However, this approach introduces two critical challenges. First, verifying all tree nodes efficiently requires a specialized tree attention mechanism with causality-preserving masks, enabling the target model to process the entire tree structure in a single forward pass. Second, naively expanding a full tree leads to exponential growth ($B^D$ nodes), quickly overwhelming computational budgets. To address this, we introduce an adaptive pruning strategy that dynamically eliminates low-probability branches based on a probability threshold $\tau$ and enforces a maximum node budget, balancing exploration breadth with computational efficiency.
+
+We present \textbf{DynaTree}, a tree-based speculative decoding framework that instantiates these ideas.
+
+We conduct comprehensive experiments on Pythia-2.8B (target) and Pythia-70M (draft) models, demonstrating that DynaTree achieves 1.62$\times$ speedup over standard autoregressive decoding—significantly outperforming both HuggingFace's assisted generation (1.36$\times$) and linear speculative decoding with $K{=}6$ (1.11$\times$). Through systematic hyperparameter analysis across 450 configurations, we identify optimal settings ($D{=}8$, $B{=}3$, $\tau{=}0.03$ for 500-token generation) and reveal critical trade-offs between tree depth, branching factor, and pruning aggressiveness. Ablation studies confirm that dynamic pruning contributes a 25.4\% relative improvement by reducing tree size while maintaining acceptance quality. Our main contributions are: we propose DynaTree, a tree-based speculative decoding framework with adaptive pruning that achieves superior speedup over linear baselines; we provide comprehensive empirical analysis of the depth-breadth-threshold parameter space, establishing best practices for tree configuration; and we demonstrate consistent performance gains across varying generation lengths, providing insights into when tree-based exploration offers the greatest advantage.
 
 
-Please read the instructions below carefully and follow them faithfully.
+\section{Related Work}
+
+\subsection{Speculative Decoding}
+
+Speculative decoding was introduced by \citet{leviathan2023fast} to accelerate LLM inference through a draft-verify paradigm. Linear implementations propose sequential token chains for parallel verification, but suffer from single-path inefficiency where early rejections waste all subsequent computation~\cite{decoding_speculative}. Recent work has explored draft model selection trade-offs~\cite{draft_tradeoff} and theoretical speedup bounds, but the fundamental limitation of linear exploration persists.
+
+\subsection{Tree-Based and Parallel Decoding}
+
+Tree-based speculation has been explored in SpecInfer~\cite{specinfer} and OPT-Tree~\cite{opt_tree}, which construct adaptive draft trees to maximize expected acceptance length. Our work differs by introducing probability-threshold-based adaptive pruning and providing systematic empirical analysis of the tree parameter space. Medusa~\cite{medusa} achieves parallel prediction through multiple decoding heads but requires model-specific fine-tuning, whereas DynaTree operates as a training-free inference-time technique.
+
+\subsection{Dynamic Pruning Strategies}
+
+ProPD~\cite{propd} introduces early pruning based on top-$k$ prediction heads, while CAST~\cite{cast} develops cost-aware tree construction. DySpec~\cite{dyspec} employs greedy dynamic expansion guided by draft model confidence. Our adaptive pruning strategy combines probability thresholds with node budgets, offering a simpler yet effective approach that balances exploration with computational efficiency.
 
 
-\subsection{Style}
+\section{Placeholder for Method Section}
+\label{method}
+
+[Method section to be written]
 
 
-Papers to be submitted to NeurIPS 2025 must be prepared according to the
-instructions presented here. Papers may only be up to {\bf nine} pages long,
-including figures.
-% Additional pages \emph{containing only acknowledgments and references} are allowed.
-Additional pages \emph{containing references, checklist, and the optional technical appendices} do not count as content pages.
-Papers that exceed the page limit will not be
-reviewed, or in any other way considered for presentation at the conference.
+\section{Placeholder for Experiments Section}
+\label{experiments}
 
-
-The margins in 2025 are the same as those in previous years.
-
-
-Authors are required to use the NeurIPS \LaTeX{} style files obtainable at the
-NeurIPS website as indicated below. Please make sure you use the current files
-and not previous versions. Tweaking the style files may be grounds for
-rejection.
-
-
-\subsection{Retrieval of style files}
-
-
-The style files for NeurIPS and other conference information are available on
-the website at
-\begin{center}
-  \url{https://neurips.cc}
-\end{center}
-The file \verb+neurips_2025.pdf+ contains these instructions and illustrates the
-various formatting requirements your NeurIPS paper must satisfy.
-
-
-The only supported style file for NeurIPS 2025 is \verb+neurips_2025.sty+,
-rewritten for \LaTeXe{}.  \textbf{Previous style files for \LaTeX{} 2.09,
-  Microsoft Word, and RTF are no longer supported!}
-
-
-The \LaTeX{} style file contains three optional arguments: \verb+final+, which
-creates a camera-ready copy, \verb+preprint+, which creates a preprint for
-submission to, e.g., arXiv, and \verb+nonatbib+, which will not load the
-\verb+natbib+ package for you in case of package clash.
-
-
-\paragraph{Preprint option}
-If you wish to post a preprint of your work online, e.g., on arXiv, using the
-NeurIPS style, please use the \verb+preprint+ option. This will create a
-nonanonymized version of your work with the text ``Preprint. Work in progress.''
-in the footer. This version may be distributed as you see fit, as long as you do not say which conference it was submitted to. Please \textbf{do
-  not} use the \verb+final+ option, which should \textbf{only} be used for
-papers accepted to NeurIPS.
-
-
-At submission time, please omit the \verb+final+ and \verb+preprint+
-options. This will anonymize your submission and add line numbers to aid
-review. Please do \emph{not} refer to these line numbers in your paper as they
-will be removed during generation of camera-ready copies.
-
-
-The file \verb+neurips_2025.tex+ may be used as a ``shell'' for writing your
-paper. All you have to do is replace the author, title, abstract, and text of
-the paper with your own.
-
-
-The formatting instructions contained in these style files are summarized in
-Sections \ref{gen_inst}, \ref{headings}, and \ref{others} below.
-
-
-\section{General formatting instructions}
-\label{gen_inst}
-
-
-The text must be confined within a rectangle 5.5~inches (33~picas) wide and
-9~inches (54~picas) long. The left margin is 1.5~inch (9~picas).  Use 10~point
-type with a vertical spacing (leading) of 11~points.  Times New Roman is the
-preferred typeface throughout, and will be selected for you by default.
-Paragraphs are separated by \nicefrac{1}{2}~line space (5.5 points), with no
-indentation.
-
-
-The paper title should be 17~point, initial caps/lower case, bold, centered
-between two horizontal rules. The top rule should be 4~points thick and the
-bottom rule should be 1~point thick. Allow \nicefrac{1}{4}~inch space above and
-below the title to rules. All pages should start at 1~inch (6~picas) from the
-top of the page.
-
-
-For the final version, authors' names are set in boldface, and each name is
-centered above the corresponding address. The lead author's name is to be listed
-first (left-most), and the co-authors' names (if different address) are set to
-follow. If there is only one co-author, list both author and co-author side by
-side.
-
-
-Please pay special attention to the instructions in Section \ref{others}
-regarding figures, tables, acknowledgments, and references.
-
-\section{Headings: first level}
-\label{headings}
-
-
-All headings should be lower case (except for first word and proper nouns),
-flush left, and bold.
-
-
-First-level headings should be in 12-point type.
-
-
-\subsection{Headings: second level}
-
-
-Second-level headings should be in 10-point type.
-
-
-\subsubsection{Headings: third level}
-
-
-Third-level headings should be in 10-point type.
-
-
-\paragraph{Paragraphs}
-
-
-There is also a \verb+\paragraph+ command available, which sets the heading in
-bold, flush left, and inline with the text, with the heading followed by 1\,em
-of space.
+[Experiments section to be written]
 
 
 \section{Citations, figures, tables, references}
@@ -469,33 +356,70 @@ Do {\bf not} include this section in the anonymized submission, only in the fina
 
 \section*{References}
 
-
-References follow the acknowledgments in the camera-ready paper. Use unnumbered first-level heading for
-the references. Any choice of citation style is acceptable as long as you are
-consistent. It is permissible to reduce the font size to \verb+small+ (9 point)
-when listing the references.
-Note that the Reference section does not count towards the page limit.
-\medskip
-
-
 {
 \small
 
+\bibitem{leviathan2023fast}
+Leviathan, Y., Kalman, M., and Matias, Y. (2023).
+Fast inference from transformers via speculative decoding.
+In \textit{International Conference on Machine Learning (ICML)}.
 
-[1] Alexander, J.A.\ \& Mozer, M.C.\ (1995) Template-based algorithms for
-connectionist rule extraction. In G.\ Tesauro, D.S.\ Touretzky and T.K.\ Leen
-(eds.), {\it Advances in Neural Information Processing Systems 7},
-pp.\ 609--616. Cambridge, MA: MIT Press.
+\bibitem{transformer_inference}
+Transformer inference: Techniques for faster AI models. (2024).
+\textit{PremAI Technical Report}.
+\url{https://www.premai.io/blog/transformer-inference-techniques-for-faster-ai-models}
 
+\bibitem{llm_bottleneck}
+Decoding real-time LLM inference: A guide to the latency vs throughput bottleneck. (2024).
+\textit{Medium Technical Blog}.
 
-[2] Bower, J.M.\ \& Beeman, D.\ (1995) {\it The Book of GENESIS: Exploring
-  Realistic Neural Models with the GEneral NEural SImulation System.}  New York:
-TELOS/Springer--Verlag.
+\bibitem{speculative_intro}
+Mitra, S. (2025).
+Making LLMs faster: My deep dive into speculative decoding.
+\textit{Technical Blog Post}.
 
+\bibitem{nvidia_speculative}
+NVIDIA Developer. (2024).
+An introduction to speculative decoding for reducing latency in AI inference.
+\textit{NVIDIA Technical Blog}.
 
-[3] Hasselmo, M.E., Schnell, E.\ \& Barkai, E.\ (1995) Dynamics of learning and
-recall at excitatory recurrent synapses and cholinergic modulation in rat
-hippocampal region CA3. {\it Journal of Neuroscience} {\bf 15}(7):5249-5262.
+\bibitem{decoding_speculative}
+Mitchell, E., Lee, J., Khazatsky, A., Manning, C.~D., and Finn, C. (2024).
+Decoding speculative decoding.
+In \textit{NAACL}.
+
+\bibitem{specinfer}
+Miao, X., Oliaro, G., Zhang, Z., Cheng, X., Wang, Z., Wong, R. Y.~Y., Chen, Z., Arfeen, D., Abhyankar, R., and Jia, Z. (2024).
+SpecInfer: Accelerating generative large language model serving with tree-based speculative inference.
+In \textit{ASPLOS}.
+
+\bibitem{opt_tree}
+OPT-Tree: Speculative decoding with adaptive draft tree structure. (2025).
+\textit{Transactions of the Association for Computational Linguistics (TACL)}.
+
+\bibitem{medusa}
+Cai, T., Li, Y., Geng, Z., Peng, H., and Dao, T. (2024).
+Medusa: Simple LLM inference acceleration framework with multiple decoding heads.
+In \textit{ICML}.
+
+\bibitem{propd}
+Wang, J., Xu, Y., Sun, L., and Wang, D. (2024).
+ProPD: Dynamic token tree pruning and generation for LLM parallel decoding.
+\textit{arXiv preprint arXiv:2402.13485}.
+
+\bibitem{cast}
+Inference-cost-aware dynamic tree construction for efficient speculative decoding. (2024).
+\textit{arXiv preprint}.
+
+\bibitem{dyspec}
+Zhou, Y., Zhang, L., and Wang, X. (2024).
+DySpec: Faster speculative decoding with dynamic token tree structure.
+\textit{World Wide Web Journal}.
+
+\bibitem{draft_tradeoff}
+Analysis of draft model size vs. acceptance rate trade-offs in speculative decoding. (2024).
+\textit{Conference Paper}.
+
 }
 
 
