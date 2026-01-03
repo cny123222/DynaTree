@@ -10,23 +10,35 @@ echo "=========================================="
 cd "$(dirname "$0")"
 
 # Clean old auxiliary files
-echo "[1/4] Cleaning old files..."
+echo "[1/6] Cleaning old files..."
 rm -f *.aux *.log *.out *.toc *.bbl *.blg *.synctex.gz *.fdb_latexmk *.fls
 
 # First compilation
-echo "[2/4] First compilation pass..."
+echo "[2/6] First compilation pass..."
 pdflatex -interaction=nonstopmode neurips_2025.tex > /dev/null 2>&1 || {
     echo "⚠️  First pass completed with warnings (this is normal)"
 }
 
+# BibTeX (for bibliography)
+echo "[3/6] Running bibtex..."
+bibtex neurips_2025 > /dev/null 2>&1 || {
+    echo "⚠️  BibTeX completed with warnings"
+}
+
 # Second compilation (for references)
-echo "[3/4] Second compilation pass (resolving references)..."
+echo "[4/6] Second compilation pass (resolving references)..."
 pdflatex -interaction=nonstopmode neurips_2025.tex > /dev/null 2>&1 || {
     echo "⚠️  Second pass completed with warnings"
 }
 
+# Third compilation (finalize references)
+echo "[5/6] Third compilation pass (finalizing references)..."
+pdflatex -interaction=nonstopmode neurips_2025.tex > /dev/null 2>&1 || {
+    echo "⚠️  Third pass completed with warnings"
+}
+
 # Check result
-echo "[4/4] Checking output..."
+echo "[6/6] Checking output..."
 if [ -f neurips_2025.pdf ]; then
     FILE_SIZE=$(ls -lh neurips_2025.pdf | awk '{print $5}')
     PAGE_COUNT=$(pdfinfo neurips_2025.pdf 2>/dev/null | grep "Pages:" | awk '{print $2}')

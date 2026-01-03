@@ -1,0 +1,162 @@
+% Core speculative decoding and analyses
+@misc{leviathan2023fast,
+  title         = {Fast Inference from Transformers via Speculative Decoding},
+  author        = {Leviathan, Yaniv and Kalman, Matan and Matias, Yossi},
+  year          = {2023},
+  eprint        = {2211.17192},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2211.17192}
+}
+
+@misc{decoding_speculative,
+  title         = {Decoding Speculative Decoding},
+  author        = {Yan, Minghao and Agarwal, Saurabh and Venkataraman, Shivaram},
+  year          = {2025},
+  eprint        = {2402.01528},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2402.01528}
+}
+
+@misc{draft_tradeoff,
+  title         = {Unlocking Efficiency in Large Language Model Inference: A Comprehensive Survey of Speculative Decoding},
+  author        = {Xia, Heming and Yang, Zhe and Dong, Qingxiu and Wang, Peiyi and Li, Yongqi and Ge, Tao and Liu, Tianyu and Li, Wenjie and Sui, Zhifang},
+  year          = {2024},
+  eprint        = {2401.07851},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL},
+  url           = {https://arxiv.org/abs/2401.07851}
+}
+
+% Tree-based speculative decoding and pruning
+@inproceedings{specinfer,
+  title     = {SpecInfer: Accelerating Large Language Model Serving with Tree-based Speculative Inference and Verification},
+  author    = {Miao, Xupeng and Oliaro, Gabriele and Zhang, Zhihao and Cheng, Xinhao and Wang, Zeyu and Zhang, Zhengxin and Wong, Rae Ying Yee and Zhu, Alan and Yang, Lijie and Shi, Xiaoxiang and Shi, Chunan and Chen, Zhuoming and Arfeen, Daiyaan and Abhyankar, Reyna and Jia, Zhihao},
+  booktitle = {Proceedings of the 29th ACM International Conference on Architectural Support for Programming Languages and Operating Systems, Volume 3},
+  series    = {ASPLOS '24},
+  year      = {2024},
+  month     = apr,
+  pages     = {932--949},
+  publisher = {ACM},
+  doi       = {10.1145/3620666.3651335},
+  url       = {https://doi.org/10.1145/3620666.3651335}
+}
+
+@article{opt_tree,
+  title     = {OPT-Tree: Speculative Decoding with Adaptive Draft Tree Structure},
+  author    = {Wang, Jikai and Su, Yi and Li, Juntao and Xia, Qingrong and Ye, Zi and Duan, Xinyu and Wang, Zhefeng and Zhang, Min},
+  journal   = {Transactions of the Association for Computational Linguistics},
+  volume    = {13},
+  pages     = {188--199},
+  year      = {2025},
+  publisher = {MIT Press},
+  doi       = {10.1162/tacl_a_00735},
+  url       = {https://doi.org/10.1162/tacl_a_00735}
+}
+
+@misc{propd,
+  title         = {ProPD: Dynamic Token Tree Pruning and Generation for LLM Parallel Decoding},
+  author        = {Zhong, Shuzhang and Yang, Zebin and Li, Meng and Gong, Ruihao and Wang, Runsheng and Huang, Ru},
+  year          = {2024},
+  eprint        = {2402.13485},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2402.13485}
+}
+
+@misc{dyspec,
+  title         = {DySpec: Faster Speculative Decoding with Dynamic Token Tree Structure},
+  author        = {Xiong, Yunfan and Zhang, Ruoyu and Li, Yanzeng and Wu, Tianhao and Zou, Lei},
+  year          = {2024},
+  eprint        = {2410.11744},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2410.11744}
+}
+
+@misc{cast,
+  title         = {Inference-Cost-Aware Dynamic Tree Construction for Efficient Inference in Large Language Models},
+  author        = {Hong, Yinrong and Tan, Zhiquan and Hu, Kai},
+  year          = {2025},
+  eprint        = {2510.26577},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL},
+  url           = {https://arxiv.org/abs/2510.26577}
+}
+
+@misc{medusa,
+  title         = {Medusa: Simple {LLM} Inference Acceleration Framework with Multiple Decoding Heads},
+  author        = {Cai, Tianle and Li, Yuhong and Geng, Zhengyang and Peng, Hongwu and Lee, Jason D. and Chen, Deming and Dao, Tri},
+  year          = {2024},
+  eprint        = {2401.10774},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2401.10774}
+}
+
+% Complementary inference optimizations (optional, cited in broader discussion)
+@misc{flashattention,
+  title         = {FlashAttention: Fast and Memory-Efficient Exact Attention with {IO}-Awareness},
+  author        = {Dao, Tri and Fu, Daniel Y. and Ermon, Stefano and Rudra, Atri and R{\'e}, Christopher},
+  year          = {2022},
+  eprint        = {2205.14135},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2205.14135}
+}
+
+@misc{vllm,
+  title         = {Efficient Memory Management for Large Language Model Serving with {PagedAttention}},
+  author        = {Kwon, Woosuk and Li, Zhuohan and Zhuang, Siyuan and Sheng, Ying and Zheng, Lianmin and Yu, Cody Hao and Gonzalez, Joseph E. and Zhang, Hao and Stoica, Ion},
+  year          = {2023},
+  eprint        = {2309.06180},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2309.06180}
+}
+
+@misc{streamingllm,
+  title         = {Efficient Streaming Language Models with Attention Sinks},
+  author        = {Xiao, Guangxuan and Tian, Yuandong and Chen, Beidi and Han, Song and Lewis, Mike},
+  year          = {2024},
+  eprint        = {2309.17453},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL},
+  url           = {https://arxiv.org/abs/2309.17453}
+}
+
+% Web references used in the introduction (kept for completeness)
+@misc{nvidia_speculative,
+  title        = {An Introduction to Speculative Decoding for Reducing Latency in {AI} Inference},
+  author       = {{NVIDIA Developer Blog}},
+  year         = {2023},
+  howpublished = {\url{https://developer.nvidia.com/blog/an-introduction-to-speculative-decoding-for-reducing-latency-in-ai-inference/}},
+  note         = {Accessed: 2026-01-03}
+}
+
+@misc{speculative_intro,
+  title        = {Looking Back at Speculative Decoding},
+  author       = {{Google Research Blog}},
+  year         = {2023},
+  howpublished = {\url{https://research.google/blog/looking-back-at-speculative-decoding/}},
+  note         = {Accessed: 2026-01-03}
+}
+
+@misc{transformer_inference,
+  title        = {Transformer Inference: Techniques for Faster {AI} Models},
+  author       = {{Premai Blog}},
+  year         = {2024},
+  howpublished = {\url{https://www.premai.io/blog/transformer-inference-techniques-for-faster-ai-models}},
+  note         = {Accessed: 2026-01-03}
+}
+
+@misc{llm_bottleneck,
+  title        = {Decoding Real-Time {LLM} Inference: A Guide to the Latency vs Throughput Bottleneck},
+  author       = {{Medium}},
+  year         = {2024},
+  howpublished = {\url{https://medium.com/learnwithnk/decoding-real-time-llm-inference-a-guide-to-the-latency-vs-throughput-bottleneck-c1ad96442d50}},
+  note         = {Accessed: 2026-01-03}
+}
+
+

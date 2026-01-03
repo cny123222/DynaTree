@@ -52,6 +52,9 @@
 \usepackage{hyperref}       % hyperlinks
 \usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
+\usepackage{graphicx}       % figures
+\usepackage{amsmath}        % math
+\usepackage{amssymb}        % math symbols
 \usepackage{amsfonts}       % blackboard math symbols
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
@@ -73,7 +76,7 @@
 \author{%
   Nuoyan Chen$^*$ \quad
   Jiamin Liu$^*$ \quad
-  Zhaocheng Li\thanks{$^*$ Equal contribution.} \\
+  Zhaocheng Li\thanks{Equal contribution.} \\
   School of Computer Science\\
   Shanghai Jiao Tong University\\
   \texttt{\{cny123222, logic-1.0, lzc050419\}@sjtu.edu.cn}
@@ -87,46 +90,131 @@
 
 
 \begin{abstract}
-Autoregressive generation in large language models (LLMs) suffers from inherent sequential bottlenecks that severely underutilize modern GPU parallelism. Speculative decoding accelerates inference by using a smaller draft model to propose candidate tokens for parallel verification by the target model. However, existing linear approaches explore only a single token sequence per iteration, leading to substantial computational waste when early predictions fail. We propose \textbf{DynaTree}, a tree-based speculative decoding framework that generates multiple candidate paths through top-$k$ branching at each tree level and verifies them simultaneously via specialized tree attention mechanisms. To manage the exponential growth of tree size, we introduce an adaptive pruning strategy that dynamically eliminates low-probability branches based on learned probability thresholds. Experiments on Pythia models demonstrate that DynaTree achieves 1.62$\times$ speedup over standard autoregressive decoding, substantially outperforming both existing assisted generation methods and linear speculative decoding baselines. Comprehensive analysis reveals critical trade-offs between tree depth, branching factor, and pruning aggressiveness, with consistent improvements observed across varying generation lengths.
+Autoregressive decoding in large language models (LLMs) is fundamentally sequential and therefore underutilizes modern accelerator parallelism during token generation. Speculative decoding mitigates this bottleneck by letting a lightweight draft model propose multiple tokens that are verified in parallel by the target model; however, common linear variants explore only a single draft chain per step and can waste substantial computation when early tokens are rejected. We propose \textbf{DynaTree}, a tree-based speculative decoding framework that drafts multiple candidate continuations via top-$k$ branching and verifies the resulting token tree in one forward pass using tree attention. To control the exponential growth of the draft tree, DynaTree applies adaptive pruning that removes low-probability branches under an explicit node budget. Experiments on Pythia models show that DynaTree improves decoding throughput by up to 1.62$\times$ over standard autoregressive generation and consistently outperforms strong speculative decoding baselines across generation lengths.
 \end{abstract}
 
 
 \section{Introduction}
 
-The remarkable capabilities of large language models (LLMs) have transformed natural language processing, yet their deployment faces a fundamental bottleneck: the sequential nature of autoregressive token generation. During the decode phase, each new token must be generated conditioned on all previously generated tokens, forcing the model to perform a full forward pass for every single token~\cite{transformer_inference}. This step-by-step dependency severely underutilizes modern GPU parallelism, as powerful compute units remain idle while awaiting the next token, creating what is fundamentally a \textit{memory-bound} rather than compute-bound process~\cite{llm_bottleneck,speculative_intro}.
+Large language models (LLMs) are typically deployed with autoregressive decoding, where each output token is generated after conditioning on all previously generated tokens. While transformer inference can exploit parallelism during the prefill stage, the decode stage remains inherently sequential and requires a full forward pass per token, leading to poor hardware utilization and high latency~\cite{transformer_inference,llm_bottleneck,speculative_intro}.
 
-Speculative decoding has emerged as a promising solution to this bottleneck~\cite{leviathan2023fast}. The core insight is elegant: use a smaller, faster \textit{draft model} to rapidly propose multiple candidate tokens, then leverage the target model's parallel processing capability to verify all candidates in a single forward pass. If the target model agrees with the draft predictions, multiple tokens are accepted simultaneously, effectively amortizing the cost of the expensive target model inference. Critically, this acceleration comes with a mathematical guarantee: the output distribution remains \textit{identical} to standard autoregressive generation through careful rejection sampling~\cite{nvidia_speculative}.
+Speculative decoding alleviates this bottleneck by separating \emph{proposal} and \emph{verification}~\cite{leviathan2023fast}. A small draft model proposes several candidate tokens, and the target model verifies them in parallel; when the proposal matches the target distribution, multiple tokens can be committed per iteration. Importantly, with rejection sampling, speculative decoding preserves the exact output distribution of the target model~\cite{nvidia_speculative}.
 
-However, existing speculative decoding methods predominantly employ \textit{linear} drafting strategies, where the draft model proposes a single sequential chain of $K$ tokens (e.g., $t_1 \rightarrow t_2 \rightarrow t_3 \rightarrow \cdots \rightarrow t_K$). This single-path exploration suffers from a critical inefficiency: if any token $t_i$ in the sequence is rejected during verification, \textit{all subsequent tokens} $t_{i+1}$ through $t_K$ are discarded, wasting both the draft generation effort and verification computation. When the draft model's predictions diverge from the target model's distribution—which is common, especially for smaller draft models—this leads to poor acceptance rates and limits the achievable speedup~\cite{decoding_speculative}.
+In practice, most speculative decoding systems employ \emph{linear} drafting: the draft model proposes a single chain of $K$ tokens. This design is brittle under draft--target mismatch: a rejection at an early position forces all subsequent drafted tokens to be discarded, wasting both draft computation and target-model verification work, and constraining achievable speedups~\cite{decoding_speculative}.
 
-This observation motivates a natural question: why restrict speculation to a single path? If the uncertainty lies in which token will be correct, exploring multiple candidate paths in parallel should increase the probability that at least one path aligns with the target model's preferences. This insight motivates a shift from linear chains to tree-based speculation structures, where the draft model generates the top-$B$ candidate tokens at each depth level, creating multiple parallel exploration paths. For instance, with branch factor $B{=}3$ and depth $D{=}3$, the tree can explore up to 27 distinct token sequences simultaneously, dramatically increasing the likelihood of finding an acceptable path.
+We argue that the single-path constraint is unnecessary. When multiple plausible next tokens compete, exploring several continuations in parallel increases the chance that at least one path aligns with the target model, thereby improving the expected number of accepted tokens per verification step. This motivates \emph{tree-based} speculation, where the draft expands multiple candidates via top-$k$ branching and the target verifies the resulting token tree with a structured, causality-preserving attention mask.
 
-However, this approach introduces two critical challenges. First, verifying all tree nodes efficiently requires a specialized tree attention mechanism with causality-preserving masks, enabling the target model to process the entire tree structure in a single forward pass. Second, naively expanding a full tree leads to exponential growth ($B^D$ nodes), quickly overwhelming computational budgets. To address this, we introduce an adaptive pruning strategy that dynamically eliminates low-probability branches based on a probability threshold $\tau$ and enforces a maximum node budget, balancing exploration breadth with computational efficiency.
-
-We present \textbf{DynaTree}, a tree-based speculative decoding framework that instantiates these ideas.
-
-We conduct comprehensive experiments on Pythia-2.8B (target) and Pythia-70M (draft) models, demonstrating that DynaTree achieves 1.62$\times$ speedup over standard autoregressive decoding—significantly outperforming both HuggingFace's assisted generation (1.36$\times$) and linear speculative decoding with $K{=}6$ (1.11$\times$). Through systematic hyperparameter analysis across 450 configurations, we identify optimal settings ($D{=}8$, $B{=}3$, $\tau{=}0.03$ for 500-token generation) and reveal critical trade-offs between tree depth, branching factor, and pruning aggressiveness. Ablation studies confirm that dynamic pruning contributes a 25.4\% relative improvement by reducing tree size while maintaining acceptance quality. Our main contributions are: we propose DynaTree, a tree-based speculative decoding framework with adaptive pruning that achieves superior speedup over linear baselines; we provide comprehensive empirical analysis of the depth-breadth-threshold parameter space, establishing best practices for tree configuration; and we demonstrate consistent performance gains across varying generation lengths, providing insights into when tree-based exploration offers the greatest advantage.
+The central challenge is controlling verification cost: naive tree expansion grows exponentially with depth and branching. We present \textbf{DynaTree}, a tree-based speculative decoding framework with a lightweight adaptive pruning mechanism that removes low-probability branches while enforcing an explicit node budget. Empirically, DynaTree achieves up to 1.62$\times$ throughput improvement over standard autoregressive decoding on Pythia models and consistently outperforms strong speculative decoding baselines. In summary, our contributions are: (i) a practical tree-based speculative decoding algorithm with efficient tree attention verification; (ii) an adaptive pruning strategy that stabilizes the depth--breadth trade-off under a fixed verification budget; and (iii) an extensive empirical study characterizing these trade-offs across generation lengths.
 
 
 \section{Related Work}
 
 \subsection{Speculative Decoding}
 
-Speculative decoding was introduced by \citet{leviathan2023fast} to accelerate LLM inference through a draft-verify paradigm. Linear implementations propose sequential token chains for parallel verification, but suffer from single-path inefficiency where early rejections waste all subsequent computation~\cite{decoding_speculative}. Recent work has explored draft model selection trade-offs~\cite{draft_tradeoff} and theoretical speedup bounds, but the fundamental limitation of linear exploration persists.
+Speculative decoding accelerates autoregressive generation by decoupling \emph{proposal} and \emph{verification}: a lightweight draft model proposes multiple tokens, and the target model verifies these candidates in parallel while preserving the exact output distribution through rejection sampling~\cite{leviathan2023fast,nvidia_speculative}. Empirical and theoretical analyses highlight that achievable speedups depend critically on the acceptance behavior induced by the draft--target mismatch, and on the additional overhead introduced by drafting and verification~\cite{decoding_speculative,draft_tradeoff}. Despite strong progress, the dominant implementation remains \emph{linear} drafting, where a single speculative chain is proposed per iteration; when early tokens are rejected, downstream drafted tokens are discarded, causing substantial wasted computation and limiting utilization of parallel verification.
 
 \subsection{Tree-Based and Parallel Decoding}
 
-Tree-based speculation has been explored in SpecInfer~\cite{specinfer} and OPT-Tree~\cite{opt_tree}, which construct adaptive draft trees to maximize expected acceptance length. Our work differs by introducing probability-threshold-based adaptive pruning and providing systematic empirical analysis of the tree parameter space. Medusa~\cite{medusa} achieves parallel prediction through multiple decoding heads but requires model-specific fine-tuning, whereas DynaTree operates as a training-free inference-time technique.
+To overcome the single-path limitation, recent work explores \emph{tree-based} speculative decoding, where multiple candidate continuations are drafted and verified in a single target-model forward pass using structured attention masks. SpecInfer~\cite{specinfer} instantiates this idea in an LLM serving setting by building a token tree and verifying it efficiently. OPT-Tree~\cite{opt_tree} further studies \emph{adaptive} tree construction, selecting tree shapes to maximize expected acceptance length under a fixed verification budget. In parallel, Medusa~\cite{medusa} pursues multi-token generation by augmenting a base model with multiple decoding heads and verifying the induced candidate tree; unlike draft--target speculative decoding, it requires model-specific fine-tuning. Our work follows the draft--target paradigm but focuses on practical tree construction and verification under strict budget constraints, emphasizing dynamic pruning as a lightweight mechanism to stabilize performance.
 
 \subsection{Dynamic Pruning Strategies}
 
-ProPD~\cite{propd} introduces early pruning based on top-$k$ prediction heads, while CAST~\cite{cast} develops cost-aware tree construction. DySpec~\cite{dyspec} employs greedy dynamic expansion guided by draft model confidence. Our adaptive pruning strategy combines probability thresholds with node budgets, offering a simpler yet effective approach that balances exploration with computational efficiency.
+Tree-based methods must contend with the exponential growth of candidates with depth and branching. ProPD~\cite{propd} proposes dynamic token-tree pruning and generation, leveraging early signals to remove low-utility branches before full verification. Cost-aware formulations further model verification overhead and explicitly optimize the trade-off between exploration and target-model computation~\cite{cast}. DySpec~\cite{dyspec} employs greedy, confidence-guided expansion to adapt tree structures online. DynaTree is closely related to these approaches: we adopt a probability-threshold-based pruning rule coupled with an explicit node budget, aiming for a simple, training-free mechanism that is easy to integrate while maintaining strong speedups in practice.
 
 
-\section{Placeholder for Method Section}
+\section{Methodology}
 \label{method}
 
-[Method section to be written]
+\subsection{Problem Setup and Notation}
+Let \(M_T\) denote a target autoregressive language model and \(M_D\) a smaller draft model. Given a prefix (prompt) \(x_{1:t}\), greedy decoding with \(M_T\) produces tokens \(y_{t+1}, y_{t+2}, \dots\) where
+\[
+y_{i} \;=\; \arg\max_{v \in \mathcal{V}} p_T(v \mid x_{1:i-1}).
+\]
+Speculative decoding accelerates generation by proposing candidate tokens with \(M_D\) and verifying them with \(M_T\), while preserving the greedy output when the verification rule only commits tokens that match the target greedy predictions.
+
+\subsection{Overview of DynaTree}
+DynaTree generalizes linear speculative decoding from a single draft chain to a \emph{draft token tree}. In each iteration, DynaTree performs: (i) \textbf{tree drafting} with \(M_D\) by expanding top-\(B\) candidates up to depth \(D\); (ii) \textbf{parallel verification} of all drafted nodes using a tree attention mask in a single forward pass of \(M_T\); (iii) \textbf{path selection and commit} by greedily selecting the longest path consistent with the target model's greedy predictions; and (iv) \textbf{KV-cache update} for the committed tokens.
+
+\begin{figure}[t]
+  \centering
+  \fbox{\rule[-.5cm]{0cm}{3.0cm}\rule[-.5cm]{0.95\linewidth}{0cm}}
+  \caption{\textbf{Architecture overview (placeholder).} DynaTree iteration pipeline: draft-tree construction (with pruning), BFS flattening, tree-attention verification in one target forward pass, and commit/cache update for the longest valid path.}
+  \label{fig:arch}
+\end{figure}
+
+\subsection{Draft Tree Construction with Dynamic Pruning}
+We maintain a token tree \(\mathcal{T}=(\mathcal{N}, \mathcal{E})\) whose nodes \(u \in \mathcal{N}\) correspond to drafted tokens. Each node stores: token \(z_u \in \mathcal{V}\), parent \(\pi(u)\), depth \(d(u)\), draft log-probability \(\ell_u = \log p_D(z_u \mid \text{prefix}(\pi(u)))\), and cumulative log-probability \(\bar{\ell}_u = \sum_{v \in \text{path}(u)} \ell_v\).
+
+\paragraph{Expansion.}
+Starting from the current prefix \(x_{1:t}\), we first obtain the draft distribution \(p_D(\cdot \mid x_{1:t})\) and create the root node \(u_0\) using the top-1 token. Then, for each active leaf \(u\) with \(d(u) < D\), we expand children by selecting the top-\(B\) tokens under \(p_D(\cdot \mid x_{1:t+\text{pos}(u)})\) (implemented via cached one-token forward passes). To bound computation, we enforce a hard \textbf{node budget} \(N_{\max}\) and stop expansion when \(|\mathcal{N}| \ge N_{\max}\).
+
+\paragraph{Probability-threshold pruning (V2).}
+To avoid wasting draft computation on unlikely branches, DynaTree prunes any leaf \(u\) whose cumulative probability falls below a threshold \(\tau \in (0,1)\):
+\[
+\bar{\ell}_u \;<\; \log \tau \quad \Rightarrow \quad \text{prune } u.
+\]
+This rule corresponds exactly to the implementation in `TreeSpeculativeGeneratorV2`, where \(\bar{\ell}_u\) is accumulated along the path and compared against \(\log\tau\).
+
+\begin{figure}[t]
+  \centering
+  \fbox{%
+    \begin{minipage}{0.95\linewidth}
+    \small
+    \textbf{Pseudocode (one DynaTree iteration, greedy decoding).}
+    \begin{enumerate}
+      \item Draft a token tree \(\mathcal{T}\) with parameters \((D,B,\tau,N_{\max})\).
+      \item Flatten \(\mathcal{T}\) in BFS order to obtain tokens \(z_{1:n}\).
+      \item Build the tree attention mask \(\mathbf{A}\) (prefix + ancestors only).
+      \item Run one target forward pass on \(z_{1:n}\) with \(\mathbf{A}\) to get logits.
+      \item Select the longest root-to-leaf path whose tokens match target greedy predictions.
+      \item Commit the matched tokens and append one target ``bonus'' token.
+      \item Crop target KV cache back to the pre-iteration prefix and rebuild it on committed tokens.
+    \end{enumerate}
+    \end{minipage}
+  }
+  \caption{\textbf{DynaTree iteration pseudocode.} (Rendered without algorithm packages for portability.)}
+  \label{fig:algo}
+\end{figure}
+
+\subsection{Tree Attention for Parallel Verification}
+To verify all drafted tokens in one target-model forward pass, we \emph{flatten} the tree in breadth-first order (BFS), producing a sequence \(z_{1:n}\) where each token corresponds to one node and all ancestors appear earlier than descendants. We then construct a boolean attention mask \(\mathbf{A} \in \{0,1\}^{n \times (t+n)}\) such that each drafted token attends to: (i) all prefix tokens \(x_{1:t}\), and (ii) only its ancestors (including itself) in the flattened tree:
+\[
+\mathbf{A}_{i,j} =
+\begin{cases}
+1, & 1 \le j \le t,\\
+1, & j=t+\mathrm{pos}(v) \text{ for some ancestor } v \in \mathrm{Anc}(u_i)\cup\{u_i\},\\
+0, & \text{otherwise.}
+\end{cases}
+\]
+This mask ensures the conditional distribution computed at each node matches the distribution of sequential decoding along its unique root-to-node path, while enabling parallel verification across different branches~\cite{specinfer,opt_tree}.
+
+\begin{figure}[t]
+  \centering
+  \fbox{\rule[-.5cm]{0cm}{3.0cm}\rule[-.5cm]{0.95\linewidth}{0cm}}
+  \caption{\textbf{Tree attention mask (placeholder).} Example tree, BFS flattening, and the induced causal mask where each node attends only to the prefix and its ancestors.}
+  \label{fig:tree-attn}
+\end{figure}
+
+\subsection{Greedy Path Selection and Cache Update}
+\paragraph{Verification signals.}
+Let \(\hat{y}_{t+1} = \arg\max p_T(\cdot \mid x_{1:t})\) be the target model's greedy next token from the prefix (available from the prefix logits). For each tree node \(u\) with flattened position \(i\), the target forward pass outputs logits \(\mathbf{s}_i\), whose argmax \(\hat{y}(u)=\arg\max \mathbf{s}_i\) corresponds to the greedy \emph{next-token} prediction after consuming the path to \(u\).
+
+\paragraph{Longest valid path.}
+DynaTree commits the longest path \(u_0 \rightarrow u_1 \rightarrow \cdots \rightarrow u_m\) such that the drafted token at each node matches the target greedy prediction from its parent context:
+\[
+z_{u_0}=\hat{y}_{t+1},\quad
+z_{u_{k}}=\hat{y}(u_{k-1}) \;\; \text{for } k=1,\dots,m.
+\]
+If no drafted token matches the first greedy prediction, we fall back to committing \(\hat{y}_{t+1}\) (one token progress). After committing the matched draft tokens, we append one \emph{bonus} token \(\hat{y}(u_m)\) from the target model, mirroring the greedy speculative decoding convention and ensuring steady progress.
+
+\paragraph{KV-cache management.}
+Tree verification may populate KV states for non-committed branches. To maintain correctness, we crop the target cache back to the pre-iteration prefix length \(t\) and then forward only the committed tokens to rebuild the cache (as implemented in `_update_tree_cache`).
+
+\subsection{Correctness for Greedy Decoding}
+We sketch the correctness argument for greedy decoding (the setting used throughout our experiments). The tree attention mask guarantees that for any node \(u\), the target logits at \(u\) are computed from exactly the same conditioning context as in sequential decoding along the root-to-\(u\) path. DynaTree commits a drafted token \emph{only if} it equals the target greedy argmax under that context. Therefore, every committed token matches the token that greedy decoding with \(M_T\) would produce at that position. The cache rollback-and-rebuild step ensures the subsequent iteration starts from an identical KV state. Consequently, DynaTree generates exactly the same token sequence as greedy decoding with the target model, while reducing the number of expensive target-model forward passes by verifying many candidate tokens in parallel.
+
+\subsection{Complexity Discussion}
+Let \(n=|\mathcal{N}|\le N_{\max}\) be the number of drafted nodes. Drafting requires \(O(n)\) one-token forward passes of the draft model (with cache reuse across expansions). Verification requires a single target-model forward pass over \(n\) tokens with a structured attention mask. Dynamic pruning reduces \(n\) in uncertain regions by discarding low-probability branches, improving the trade-off between draft overhead and verification parallelism.
 
 
 \section{Placeholder for Experiments Section}
@@ -684,5 +772,8 @@ IMPORTANT, please:
 
 \end{enumerate}
 
+
+\bibliographystyle{plainnat}
+\bibliography{references}
 
 \end{document}
