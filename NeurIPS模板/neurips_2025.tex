@@ -355,8 +355,8 @@ tree depth \(D\); branch factor \(B\); pruning threshold \(\tau\); node budget \
 
 \begin{figure}[t]
   \centering
-  \fbox{\rule[-.5cm]{0cm}{3.2cm}\rule[-.5cm]{0.95\linewidth}{0cm}}
-  \caption{\textbf{Parameter sweep (placeholder).} Suggested 6-panel plot: speedup vs depth, vs branching factor, vs threshold; speedup vs length; average tree size heatmap; acceptance/tokens-per-round distribution.}
+  \includegraphics[width=\linewidth]{../figures/param_sweep.pdf}
+  \caption{\textbf{Parameter sweep analysis.} (a-c) Impact of tree depth $D$, branching factor $B$, and pruning threshold $\tau$ on speedup at 500-token generation. (d) Best speedup across different generation lengths with corresponding optimal configurations. (e) Average path length as a function of depth and branching factor. (f) Acceptance rate distribution across different pruning thresholds. Stars indicate optimal configurations.}
   \label{fig:param-sweep}
 \end{figure}
 
