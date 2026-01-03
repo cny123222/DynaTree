@@ -28,8 +28,8 @@ methods = [
 throughput = [133.1, 176.6, 221.4]  # tokens/sec
 speedup = [1.11, 1.43, 1.79]
 
-# Create figure with 2 subplots side by side
-fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
+# Create figure with 2 subplots side by side - compact for paper
+fig, axes = plt.subplots(1, 2, figsize=(10, 4))
 
 # Academic color palette - progressive shading
 # From baseline (light) to full system (highlight)
@@ -49,21 +49,20 @@ ax1.set_ylim(0, max(throughput) * 1.15)
 ax1.grid(axis='y', linestyle=':', alpha=0.3, linewidth=0.5)
 ax1.set_title('(a) Throughput Improvement', fontsize=11, pad=10)
 
-# Add value labels on top of bars
+# Add value labels on top of bars and improvement percentage inside
 for i, (bar, val) in enumerate(zip(bars1, throughput)):
     height = bar.get_height()
+    # Value on top
     ax1.text(bar.get_x() + bar.get_width()/2., height + 2,
              f'{val:.1f}',
              ha='center', va='bottom', fontsize=10, fontweight='normal')
-
-# Add improvement percentage arrows
-for i in range(1, len(throughput)):
-    improvement = (throughput[i] / throughput[i-1] - 1) * 100
-    y_pos = max(throughput[i-1], throughput[i]) + 8
-    ax1.annotate(f'+{improvement:.1f}%',
-                xy=(i-0.5, y_pos), xytext=(i, y_pos),
-                ha='center', fontsize=8, color='#666666',
-                arrowprops=dict(arrowstyle='->', color='#999999', lw=0.8))
+    # Improvement percentage inside bar (from stage 2 onwards)
+    if i > 0:
+        improvement = (throughput[i] / throughput[i-1] - 1) * 100
+        ax1.text(bar.get_x() + bar.get_width()/2., height * 0.5,
+                f'+{improvement:.1f}%',
+                ha='center', va='center', fontsize=9, 
+                color='white', fontweight='bold')
 
 # =============================================================================
 # (b) Speedup comparison
@@ -80,21 +79,20 @@ ax2.axhline(y=1.0, color='#666666', linestyle='--', linewidth=0.8, alpha=0.5)
 ax2.grid(axis='y', linestyle=':', alpha=0.3, linewidth=0.5)
 ax2.set_title('(b) Speedup Improvement', fontsize=11, pad=10)
 
-# Add value labels on top of bars
+# Add value labels on top of bars and improvement inside
 for i, (bar, val) in enumerate(zip(bars2, speedup)):
     height = bar.get_height()
+    # Value on top
     ax2.text(bar.get_x() + bar.get_width()/2., height + 0.03,
              f'{val:.2f}×',
              ha='center', va='bottom', fontsize=10, fontweight='normal')
-
-# Add improvement markers
-for i in range(1, len(speedup)):
-    improvement = speedup[i] - speedup[i-1]
-    y_pos = max(speedup[i-1], speedup[i]) + 0.08
-    ax2.annotate(f'+{improvement:.2f}×',
-                xy=(i-0.5, y_pos), xytext=(i, y_pos),
-                ha='center', fontsize=8, color='#666666',
-                arrowprops=dict(arrowstyle='->', color='#999999', lw=0.8))
+    # Improvement inside bar (from stage 2 onwards)
+    if i > 0:
+        improvement = speedup[i] - speedup[i-1]
+        ax2.text(bar.get_x() + bar.get_width()/2., height * 0.5,
+                f'+{improvement:.2f}×',
+                ha='center', va='center', fontsize=9, 
+                color='white', fontweight='bold')
 
 plt.tight_layout()
 
