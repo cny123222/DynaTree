@@ -244,7 +244,7 @@ Figure~\ref{fig:main-results} visualizes these results. Although tree-based draf
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\linewidth]{../figures/main_results_bars.pdf}
+  \includegraphics[width=0.85\linewidth]{../figures/main_results_bars.pdf}
   \caption{\textbf{Throughput and speedup comparison across methods.} Left: absolute throughput in tokens per second. Right: speedup relative to autoregressive baseline. DynaTree achieves 193.4~t/s (1.62\(\times\)), outperforming HuggingFace assisted generation (1.36\(\times\)) and linear speculative decoding (1.11\(\times\)) by substantial margins. All results are averaged over 5 runs on 500-token generation with Pythia-2.8B and Pythia-70M models.}
   \label{fig:main-results}
 \end{figure}
@@ -275,7 +275,7 @@ Figure~\ref{fig:length-scaling} and Table~\ref{tab:length-scaling} examine how D
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\linewidth]{../figures/length_scaling.pdf}
+  \includegraphics[width=0.85\linewidth]{../figures/length_scaling.pdf}
   \caption{\textbf{Throughput across different generation lengths.} DynaTree consistently outperforms all baselines across generation lengths from 100 to 1000 tokens. Performance improves from 1.43\(\times\) speedup at 100 tokens to a peak of 1.79\(\times\) at 500 tokens, then plateaus at 1.71\(\times\) for 1000 tokens. The autoregressive baseline (AR) shows stable throughput across lengths, while DynaTree's advantage grows with length until verification overhead balances exploration gains. HuggingFace Assisted and Linear Speculative Decoding throughputs are estimated from their observed speedup ratios at 500 tokens (1.36\(\times\) and 1.11\(\times\) respectively), applied to baseline performance at each length.}
   \label{fig:length-scaling}
 \end{figure}
