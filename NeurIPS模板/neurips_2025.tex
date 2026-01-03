@@ -61,7 +61,7 @@
 \usepackage{xcolor}         % colors
 
 % Note. For the workshop paper template, both \title{} and \workshoptitle{} are required, with the former indicating the paper title shown in the title and the latter indicating the workshop title displayed in the footnote. 
-\title{DynaTree: Dynamic Tree-based Speculative Decoding with Adaptive Pruning}
+\title{DynaTree: Dynamic Tree-based Speculative Decoding with Adaptive Pruning for Efficient LLM Inference}
 
 
 % The \author macro works with any number of authors. There are two commands
@@ -217,10 +217,103 @@ We sketch the correctness argument for greedy decoding (the setting used through
 Let \(n=|\mathcal{N}|\le N_{\max}\) be the number of drafted nodes. Drafting requires \(O(n)\) one-token forward passes of the draft model (with cache reuse across expansions). Verification requires a single target-model forward pass over \(n\) tokens with a structured attention mask. Dynamic pruning reduces \(n\) in uncertain regions by discarding low-probability branches, improving the trade-off between draft overhead and verification parallelism.
 
 
-\section{Placeholder for Experiments Section}
+\section{Experiments}
 \label{experiments}
 
-[Experiments section to be written]
+\subsection{Experimental Setup}
+\paragraph{Models.}
+We evaluate on the Pythia family with a target model \(M_T=\) Pythia-2.8B and a draft model \(M_D=\) Pythia-70M, using greedy decoding throughout (\texttt{do\_sample=False}).
+
+\paragraph{Hardware and software.}
+All experiments are run on a single NVIDIA GPU. We use PyTorch 2.x and HuggingFace Transformers 4.x with \texttt{DynamicCache} for KV management.
+
+\paragraph{Workloads.}
+Unless otherwise stated, we generate 500 new tokens from a fixed technical prompt and report averages over 5 runs, skipping the first run as warmup (see `papers/Tree_Speculative_Decoding_实验报告.md`).
+
+\subsection{Metrics}
+We report \textbf{throughput} (tokens/sec) as the primary metric. We also report \textbf{speedup} relative to the autoregressive baseline, and (when available) \textbf{acceptance rate} and \textbf{tokens per iteration} (average committed tokens per verification step).
+
+\subsection{Baselines}
+We compare against:
+(i) \textbf{AR} greedy decoding with the target model;
+(ii) \textbf{HuggingFace assisted generation} (built-in speculative decoding using \texttt{assistant\_model});
+(iii) \textbf{linear speculative decoding} implemented with a draft chain of length \(K\);
+and (iv) \textbf{StreamingLLM + speculative decoding} for long-context cache compression.
+
+\subsection{Main Results}
+Table~\ref{tab:main-results} summarizes end-to-end throughput on 500-token generation. DynaTree (Tree V2) achieves the best speedup (1.62\(\times\)) and outperforms both HuggingFace assisted generation (1.36\(\times\)) and the best linear speculative decoding setting (1.11\(\times\)).
+
+\begin{table}[t]
+\centering
+\caption{Main decoding throughput on Pythia (500-token generation). Higher is better.}
+\label{tab:main-results}
+\begin{tabular}{lccc}
+\toprule
+Method & Throughput (t/s) & Speedup & Notes \\
+\midrule
+AR (target-only) & 119.4 & 1.00 & Greedy decoding \\
+HuggingFace assisted & 161.9 & 1.36 & \texttt{assistant\_model} \\
+Linear speculative (K=6) & 133.1 & 1.11 & Best linear in report \\
+StreamingLLM + speculative (cache=1024) & 132.9 & 1.11 & Cache compression \\
+\textbf{DynaTree (Tree V2)} & \textbf{193.4} & \textbf{1.62} & \(D{=}8,B{=}3,\tau{=}0.03,N_{\max}{=}128\) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+  \centering
+  \fbox{\rule[-.5cm]{0cm}{3.2cm}\rule[-.5cm]{0.95\linewidth}{0cm}}
+  \caption{\textbf{Main results visualization (placeholder).} Bar chart of throughput/speedup for Table~\ref{tab:main-results}.}
+  \label{fig:main-results}
+\end{figure}
+
+\subsection{Ablation Study: Progressive Component Addition}
+To isolate the contribution of tree structure and pruning/optimization, we use the exhaustive parameter sweep to form a progressive ablation sequence (Linear \(\rightarrow\) Tree \(\rightarrow\) Optimized Tree). Table~\ref{tab:ablation} reports throughput and speedup under the sweep harness; while absolute numbers can differ from the end-to-end benchmark, the relative trend is consistent.
+
+\begin{table}[t]
+\centering
+\caption{Ablation study (progressive component addition) extracted from the sweep results (`results/ablation_proper.json`).}
+\label{tab:ablation}
+\begin{tabular}{lccc}
+\toprule
+Method & Configuration & Throughput (t/s) & Speedup \\
+\midrule
+Linear speculative & K=6 & 133.1 & 1.11 \\
++ Tree structure & \(D{=}4,B{=}3,\tau{=}0.01\) & 176.6 & 1.43 \\
+\textbf{+ Depth \& pruning optimization} & \textbf{\(D{=}8,B{=}3,\tau{=}0.03\)} & \textbf{221.4} & \textbf{1.79} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Hyperparameter Sweep}
+We perform a grid search over tree depth \(D \in \{3,4,5,6,7,8\}\), branching factor \(B \in \{2,3,4\}\), and pruning threshold \(\tau \in \{0.01,0.02,0.03,0.05,0.1\}\) across multiple generation lengths (100--1000 tokens), totaling 450 configurations (`results/tree_param_search_20251231_140952.json`). Figure~\ref{fig:param-sweep} will present the main trade-offs: increasing \(D\) and \(B\) improves exploration but raises verification cost, while \(\tau\) controls the effective tree size by pruning low-probability branches.
+
+\begin{figure}[t]
+  \centering
+  \fbox{\rule[-.5cm]{0cm}{3.2cm}\rule[-.5cm]{0.95\linewidth}{0cm}}
+  \caption{\textbf{Parameter sweep (placeholder).} Suggested 6-panel plot: speedup vs depth, vs branching factor, vs threshold; speedup vs length; average tree size heatmap; acceptance/tokens-per-round distribution.}
+  \label{fig:param-sweep}
+\end{figure}
+
+\subsection{Sequence Length Scaling}
+Table~\ref{tab:length-scaling} reports the best-performing Tree V2 configuration selected per generation length, together with baseline throughput and speedup (extracted from the sweep; `results/length_scaling_extracted.json`). We observe that speedup increases from short to medium lengths as verification overhead is amortized, peaking around 500 tokens in our setting.
+
+\begin{table}[t]
+\centering
+\caption{Best Tree V2 performance across different generation lengths (from `results/length_scaling_extracted.json`).}
+\label{tab:length-scaling}
+\begin{tabular}{lccccc}
+\toprule
+Length & Optimal \((D,B,\tau)\) & Baseline (t/s) & Tree V2 (t/s) & Speedup & Accept. \\
+\midrule
+100  & (7,3,0.03) & 105.3 & 150.7 & 1.43 & 0.31 \\
+200  & (7,3,0.03) & 125.5 & 193.2 & 1.54 & 0.36 \\
+300  & (7,3,0.03) & 124.2 & 199.0 & 1.60 & 0.38 \\
+500  & (8,3,0.03) & 123.9 & 221.4 & 1.79 & 0.38 \\
+1000 & (6,3,0.05) & 124.5 & 212.3 & 1.71 & 0.37 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 
 \section{Citations, figures, tables, references}
