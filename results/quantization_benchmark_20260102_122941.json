@@ -1,0 +1,198 @@
+{
+  "config": {
+    "target_model": "/mnt/disk1/models/pythia-2.8b",
+    "draft_model": "/mnt/disk1/models/pythia-70m",
+    "tree_depth": 8,
+    "tree_branch": 3,
+    "tree_threshold": 0.03,
+    "token_lengths": [
+      100,
+      300,
+      500
+    ],
+    "num_runs": 4
+  },
+  "results": [
+    {
+      "config": "FP16_100",
+      "max_new_tokens": 100,
+      "avg_throughput": 61.91607218448116,
+      "avg_acceptance_rate": 0.25,
+      "avg_memory_peak_mb": 5557.41015625,
+      "runs": [
+        {
+          "tokens": 100,
+          "time": 1.6248377533629537,
+          "throughput": 61.54460640333371,
+          "acceptance_rate": 0.25,
+          "memory_peak_mb": 5557.41015625
+        },
+        {
+          "tokens": 100,
+          "time": 1.6078603006899357,
+          "throughput": 62.19445803661539,
+          "acceptance_rate": 0.25,
+          "memory_peak_mb": 5557.41015625
+        },
+        {
+          "tokens": 100,
+          "time": 1.6126651726663113,
+          "throughput": 62.009152113494395,
+          "acceptance_rate": 0.25,
+          "memory_peak_mb": 5557.41015625
+        }
+      ]
+    },
+    {
+      "config": "FP16_300",
+      "max_new_tokens": 300,
+      "avg_throughput": 172.71096335975946,
+      "avg_acceptance_rate": 0.2819548872180451,
+      "avg_memory_peak_mb": 5653.1943359375,
+      "runs": [
+        {
+          "tokens": 300,
+          "time": 1.7364536821842194,
+          "throughput": 172.76590966863068,
+          "acceptance_rate": 0.2819548872180451,
+          "memory_peak_mb": 5653.1943359375
+        },
+        {
+          "tokens": 300,
+          "time": 1.7386927707120776,
+          "throughput": 172.54342173237177,
+          "acceptance_rate": 0.2819548872180451,
+          "memory_peak_mb": 5653.1943359375
+        },
+        {
+          "tokens": 300,
+          "time": 1.7358744507655501,
+          "throughput": 172.8235586782759,
+          "acceptance_rate": 0.2819548872180451,
+          "memory_peak_mb": 5653.1943359375
+        }
+      ]
+    },
+    {
+      "config": "FP16_500",
+      "max_new_tokens": 500,
+      "avg_throughput": 194.48881359396265,
+      "avg_acceptance_rate": 0.2963841138114997,
+      "avg_memory_peak_mb": 5726.1171875,
+      "runs": [
+        {
+          "tokens": 500,
+          "time": 2.583100446499884,
+          "throughput": 193.56583700703658,
+          "acceptance_rate": 0.2963841138114997,
+          "memory_peak_mb": 5726.1171875
+        },
+        {
+          "tokens": 500,
+          "time": 2.557589908130467,
+          "throughput": 195.49654868848276,
+          "acceptance_rate": 0.2963841138114997,
+          "memory_peak_mb": 5726.1171875
+        },
+        {
+          "tokens": 500,
+          "time": 2.5719628110527992,
+          "throughput": 194.40405508636866,
+          "acceptance_rate": 0.2963841138114997,
+          "memory_peak_mb": 5726.1171875
+        }
+      ]
+    },
+    {
+      "config": "INT8_100",
+      "max_new_tokens": 100,
+      "avg_throughput": 36.062554362175185,
+      "avg_acceptance_rate": 0.25,
+      "avg_memory_peak_mb": 3171.509765625,
+      "runs": [
+        {
+          "tokens": 100,
+          "time": 2.7817449709400535,
+          "throughput": 35.94865850200723,
+          "acceptance_rate": 0.25,
+          "memory_peak_mb": 3171.509765625
+        },
+        {
+          "tokens": 100,
+          "time": 2.7642762819305062,
+          "throughput": 36.17583403427472,
+          "acceptance_rate": 0.25,
+          "memory_peak_mb": 3171.509765625
+        },
+        {
+          "tokens": 100,
+          "time": 2.7729120450094342,
+          "throughput": 36.063170550243605,
+          "acceptance_rate": 0.25,
+          "memory_peak_mb": 3171.509765625
+        }
+      ]
+    },
+    {
+      "config": "INT8_300",
+      "max_new_tokens": 300,
+      "avg_throughput": 57.37127889406613,
+      "avg_acceptance_rate": 0.3024193548387097,
+      "avg_memory_peak_mb": 3256.13720703125,
+      "runs": [
+        {
+          "tokens": 300,
+          "time": 5.226044515147805,
+          "throughput": 57.40479231098078,
+          "acceptance_rate": 0.3024193548387097,
+          "memory_peak_mb": 3256.13720703125
+        },
+        {
+          "tokens": 300,
+          "time": 5.235461317002773,
+          "throughput": 57.30154074975493,
+          "acceptance_rate": 0.3024193548387097,
+          "memory_peak_mb": 3256.13720703125
+        },
+        {
+          "tokens": 300,
+          "time": 5.225797693245113,
+          "throughput": 57.40750362146265,
+          "acceptance_rate": 0.3024193548387097,
+          "memory_peak_mb": 3256.13720703125
+        }
+      ]
+    },
+    {
+      "config": "INT8_500",
+      "max_new_tokens": 500,
+      "avg_throughput": 65.5722999592849,
+      "avg_acceptance_rate": 0.30432136335970783,
+      "avg_memory_peak_mb": 3340.62353515625,
+      "runs": [
+        {
+          "tokens": 500,
+          "time": 7.613582981750369,
+          "throughput": 65.67210224128267,
+          "acceptance_rate": 0.30432136335970783,
+          "memory_peak_mb": 3340.62353515625
+        },
+        {
+          "tokens": 500,
+          "time": 7.6239157570526,
+          "throughput": 65.58309613238691,
+          "acceptance_rate": 0.30432136335970783,
+          "memory_peak_mb": 3340.62353515625
+        },
+        {
+          "tokens": 500,
+          "time": 7.638053831644356,
+          "throughput": 65.46170150418509,
+          "acceptance_rate": 0.30432136335970783,
+          "memory_peak_mb": 3340.62353515625
+        }
+      ]
+    }
+  ],
+  "timestamp": "20260102_122941"
+}

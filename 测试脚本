@@ -1,0 +1,35 @@
+benchmark命中成功率 tokens/round_length
+python papers/benchmark_acceptance_rate.py\
+         --num-samples 10\
+         --warmup-runs 2\
+         --max-new-tokens 500\
+         --max-prompt-length 800
+
+1. Draft 模型构建一棵树 (depth=D, branch=B)
+   例如 D=5, B=2:
+        t₀
+       /  \
+      t₁   t₂
+     / \   / \
+    t₃ t₄ t₅ t₆
+    ...
+
+2. Target 模型并行验证所有树节点
+
+3. 选择最佳路径 (被接受的路径)
+   例如接受路径: t₀ → t₁ → t₃ → t₇ → t₁₅
+   
+4. 这一轮接受的 tokens 数 = 路径长度 = 5
+
+5. total_tokens += 5, total_rounds += 1
+
+最大值
+Linear K: 最大 tokens/round = K + 1
+DynaTree D: 最大 tokens/round = D + 1 (如果整条最深路径都被接受，再加 bonus token)
+
+benchmark在wikitext数据集上
+python papers/benchmark_wikitext.py\
+   --max-prompt-length 800\
+   --num-samples 5\
+   --max-new-tokens 500\
+   --warmup-runs 3

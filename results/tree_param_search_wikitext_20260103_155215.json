@@ -1,0 +1,617 @@
+{
+  "config": {
+    "target_model": "/mnt/disk1/models/pythia-2.8b",
+    "draft_model": "/mnt/disk1/models/pythia-70m",
+    "dataset": "WikiText-2 (ModelScope)",
+    "depths": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "branches": [
+      2,
+      3
+    ],
+    "thresholds": [
+      0.02,
+      0.03,
+      0.05
+    ],
+    "token_lengths": [
+      200,
+      500
+    ],
+    "num_runs": 2,
+    "num_prompts": 5,
+    "prompt_length": 500,
+    "timestamp": "20260103_155215"
+  },
+  "prompts": [
+    {
+      "length": 500,
+      "preview": "Homarus gammarus , known as the European lobster or common lobster , is a species of <unk> lobster f"
+    },
+    {
+      "length": 500,
+      "preview": "Homarus gammarus is a large <unk> , with a body length up to 60 centimetres ( 24 in ) and weighing u"
+    },
+    {
+      "length": 500,
+      "preview": "Female H. gammarus reach sexual maturity when they have grown to a carapace length of 80 \u2013 85 millim"
+    },
+    {
+      "length": 500,
+      "preview": "Homarus gammarus is found across the north @-@ eastern Atlantic Ocean from northern Norway to the Az"
+    },
+    {
+      "length": 500,
+      "preview": "Adult H. gammarus live on the continental shelf at depths of 0 \u2013 150 metres ( 0 \u2013 <unk> ft ) , altho"
+    }
+  ],
+  "results": [
+    {
+      "tokens": 200,
+      "depth": 4,
+      "branch": 2,
+      "threshold": 0.02,
+      "throughput": 68.10928846897384,
+      "speedup": 1.2428710866972523,
+      "avg_path_length": 3.3011272141706924,
+      "acceptance_rate": 0.6602254428341385,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 4,
+      "branch": 2,
+      "threshold": 0.03,
+      "throughput": 122.97751414798091,
+      "speedup": 2.244116772972222,
+      "avg_path_length": 3.3011272141706924,
+      "acceptance_rate": 0.6602254428341385,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 4,
+      "branch": 2,
+      "threshold": 0.05,
+      "throughput": 125.98649184980744,
+      "speedup": 2.299025163151933,
+      "avg_path_length": 3.2804232804232805,
+      "acceptance_rate": 0.656084656084656,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 4,
+      "branch": 3,
+      "threshold": 0.02,
+      "throughput": 85.41398461947857,
+      "speedup": 1.5586504318205094,
+      "avg_path_length": 2.5062266500622665,
+      "acceptance_rate": 0.5012453300124533,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 4,
+      "branch": 3,
+      "threshold": 0.03,
+      "throughput": 89.75797218370897,
+      "speedup": 1.637920332680123,
+      "avg_path_length": 2.3399014778325125,
+      "acceptance_rate": 0.46798029556650245,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 4,
+      "branch": 3,
+      "threshold": 0.05,
+      "throughput": 111.44028227515408,
+      "speedup": 2.033583199100128,
+      "avg_path_length": 2.9138513513513513,
+      "acceptance_rate": 0.5827702702702703,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 5,
+      "branch": 2,
+      "threshold": 0.02,
+      "throughput": 118.62368704176103,
+      "speedup": 2.1646673183025484,
+      "avg_path_length": 3.431372549019608,
+      "acceptance_rate": 0.5718954248366013,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 5,
+      "branch": 2,
+      "threshold": 0.03,
+      "throughput": 118.46969408159723,
+      "speedup": 2.1618572258460738,
+      "avg_path_length": 3.2428355957767723,
+      "acceptance_rate": 0.5404725992961287,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 5,
+      "branch": 2,
+      "threshold": 0.05,
+      "throughput": 122.90502018645034,
+      "speedup": 2.242793889548069,
+      "avg_path_length": 3.2952431570555407,
+      "acceptance_rate": 0.5492071928425901,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 5,
+      "branch": 3,
+      "threshold": 0.02,
+      "throughput": 90.84392348708408,
+      "speedup": 1.6577369760024352,
+      "avg_path_length": 2.639751552795031,
+      "acceptance_rate": 0.43995859213250516,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 5,
+      "branch": 3,
+      "threshold": 0.03,
+      "throughput": 88.06943524192165,
+      "speedup": 1.6071075934643309,
+      "avg_path_length": 2.3122159850307407,
+      "acceptance_rate": 0.38536933083845676,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 5,
+      "branch": 3,
+      "threshold": 0.05,
+      "throughput": 108.04797599812042,
+      "speedup": 1.9716797570921065,
+      "avg_path_length": 2.8006267136701917,
+      "acceptance_rate": 0.466771118945032,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 6,
+      "branch": 2,
+      "threshold": 0.02,
+      "throughput": 115.75995062832018,
+      "speedup": 2.1124093184291675,
+      "avg_path_length": 3.438228438228438,
+      "acceptance_rate": 0.4911754911754912,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 6,
+      "branch": 2,
+      "threshold": 0.03,
+      "throughput": 115.69942594286653,
+      "speedup": 2.1113048526026588,
+      "avg_path_length": 3.2428355957767723,
+      "acceptance_rate": 0.46326222796811034,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 6,
+      "branch": 2,
+      "threshold": 0.05,
+      "throughput": 124.01116641979195,
+      "speedup": 2.2629790537449552,
+      "avg_path_length": 3.4100596760443307,
+      "acceptance_rate": 0.48715138229204724,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 6,
+      "branch": 3,
+      "threshold": 0.02,
+      "throughput": 97.94628673280243,
+      "speedup": 1.7873422343123315,
+      "avg_path_length": 2.8177225029148856,
+      "acceptance_rate": 0.4025317861306979,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 6,
+      "branch": 3,
+      "threshold": 0.03,
+      "throughput": 90.31955662653529,
+      "speedup": 1.6481682310566532,
+      "avg_path_length": 2.3542445644647554,
+      "acceptance_rate": 0.3363206520663936,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 6,
+      "branch": 3,
+      "threshold": 0.05,
+      "throughput": 110.16922086919885,
+      "speedup": 2.0103886318628246,
+      "avg_path_length": 2.862400327131466,
+      "acceptance_rate": 0.40891433244735226,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 7,
+      "branch": 2,
+      "threshold": 0.02,
+      "throughput": 119.13551239688736,
+      "speedup": 2.1740072035021254,
+      "avg_path_length": 3.5984848484848486,
+      "acceptance_rate": 0.4498106060606061,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 7,
+      "branch": 2,
+      "threshold": 0.03,
+      "throughput": 119.31406670883453,
+      "speedup": 2.177265496118489,
+      "avg_path_length": 3.4263608731693838,
+      "acceptance_rate": 0.42829510914617297,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 7,
+      "branch": 2,
+      "threshold": 0.05,
+      "throughput": 133.86717681011407,
+      "speedup": 2.4428333822760666,
+      "avg_path_length": 3.69281045751634,
+      "acceptance_rate": 0.4616013071895425,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 7,
+      "branch": 3,
+      "threshold": 0.02,
+      "throughput": 99.01971256930014,
+      "speedup": 1.8069303105628205,
+      "avg_path_length": 2.8441635394035156,
+      "acceptance_rate": 0.35552044242543945,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 7,
+      "branch": 3,
+      "threshold": 0.03,
+      "throughput": 91.10193742196486,
+      "speedup": 1.6624452627403652,
+      "avg_path_length": 2.38399318859089,
+      "acceptance_rate": 0.29799914857386123,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 200,
+      "depth": 7,
+      "branch": 3,
+      "threshold": 0.05,
+      "throughput": 108.11197273919797,
+      "speedup": 1.9728475816416813,
+      "avg_path_length": 2.840451248992748,
+      "acceptance_rate": 0.3550564061240935,
+      "baseline_throughput": 54.79996211832741
+    },
+    {
+      "tokens": 500,
+      "depth": 4,
+      "branch": 2,
+      "threshold": 0.02,
+      "throughput": 140.55100034971156,
+      "speedup": 1.152578907893294,
+      "avg_path_length": 4.403846153846153,
+      "acceptance_rate": 0.8807692307692307,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 4,
+      "branch": 2,
+      "threshold": 0.03,
+      "throughput": 153.7222102298328,
+      "speedup": 1.2605885176541018,
+      "avg_path_length": 4.453026481715006,
+      "acceptance_rate": 0.8906052963430013,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 4,
+      "branch": 2,
+      "threshold": 0.05,
+      "throughput": 159.36680663154598,
+      "speedup": 1.3068766460914485,
+      "avg_path_length": 4.469961856325492,
+      "acceptance_rate": 0.8939923712650986,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 4,
+      "branch": 3,
+      "threshold": 0.02,
+      "throughput": 122.36557006565457,
+      "speedup": 1.003450525141011,
+      "avg_path_length": 3.6836403033586134,
+      "acceptance_rate": 0.7367280606717226,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 4,
+      "branch": 3,
+      "threshold": 0.03,
+      "throughput": 127.48237808795042,
+      "speedup": 1.0454105609113968,
+      "avg_path_length": 3.5846438482886214,
+      "acceptance_rate": 0.7169287696577243,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 4,
+      "branch": 3,
+      "threshold": 0.05,
+      "throughput": 151.77277385319388,
+      "speedup": 1.2446022973895474,
+      "avg_path_length": 4.173913043478261,
+      "acceptance_rate": 0.8347826086956522,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 5,
+      "branch": 2,
+      "threshold": 0.02,
+      "throughput": 148.55091972514668,
+      "speedup": 1.2181817019967254,
+      "avg_path_length": 4.6606529209622,
+      "acceptance_rate": 0.7767754868270331,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 5,
+      "branch": 2,
+      "threshold": 0.03,
+      "throughput": 157.33538207467623,
+      "speedup": 1.2902180873376945,
+      "avg_path_length": 4.636686991869919,
+      "acceptance_rate": 0.7727811653116532,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 5,
+      "branch": 2,
+      "threshold": 0.05,
+      "throughput": 161.27354422481835,
+      "speedup": 1.322512717890474,
+      "avg_path_length": 4.706192821956369,
+      "acceptance_rate": 0.7843654703260614,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 5,
+      "branch": 3,
+      "threshold": 0.02,
+      "throughput": 130.37509356621143,
+      "speedup": 1.069132077218534,
+      "avg_path_length": 4.001024262211127,
+      "acceptance_rate": 0.6668373770351876,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 5,
+      "branch": 3,
+      "threshold": 0.03,
+      "throughput": 82.82449381200536,
+      "speedup": 0.6791966217752496,
+      "avg_path_length": 3.69048916003922,
+      "acceptance_rate": 0.6150815266732033,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 5,
+      "branch": 3,
+      "threshold": 0.05,
+      "throughput": 145.22533519414395,
+      "speedup": 1.1909104724977329,
+      "avg_path_length": 4.150020664003306,
+      "acceptance_rate": 0.6916701106672176,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 6,
+      "branch": 2,
+      "threshold": 0.02,
+      "throughput": 153.1077770024396,
+      "speedup": 1.2555498998111827,
+      "avg_path_length": 5.040526849037487,
+      "acceptance_rate": 0.7200752641482124,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 6,
+      "branch": 2,
+      "threshold": 0.03,
+      "throughput": 157.08305805017886,
+      "speedup": 1.2881489213561874,
+      "avg_path_length": 4.977661227661228,
+      "acceptance_rate": 0.7110944610944612,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 6,
+      "branch": 2,
+      "threshold": 0.05,
+      "throughput": 167.85371657454172,
+      "speedup": 1.3764729731837362,
+      "avg_path_length": 5.10256674569632,
+      "acceptance_rate": 0.7289381065280458,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 6,
+      "branch": 3,
+      "threshold": 0.02,
+      "throughput": 151.85043480870652,
+      "speedup": 1.2452391507670972,
+      "avg_path_length": 4.583333333333334,
+      "acceptance_rate": 0.6547619047619048,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 6,
+      "branch": 3,
+      "threshold": 0.03,
+      "throughput": 131.34436545182587,
+      "speedup": 1.0770805253163311,
+      "avg_path_length": 3.912219573323553,
+      "acceptance_rate": 0.5588885104747933,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 6,
+      "branch": 3,
+      "threshold": 0.05,
+      "throughput": 154.5717893028989,
+      "speedup": 1.267555432992784,
+      "avg_path_length": 4.527204195345789,
+      "acceptance_rate": 0.6467434564779697,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 7,
+      "branch": 2,
+      "threshold": 0.02,
+      "throughput": 144.86160130315176,
+      "speedup": 1.1879276974922155,
+      "avg_path_length": 5.167141200042181,
+      "acceptance_rate": 0.6458926500052726,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 7,
+      "branch": 2,
+      "threshold": 0.03,
+      "throughput": 156.674427885056,
+      "speedup": 1.2847979775117628,
+      "avg_path_length": 5.061241016297196,
+      "acceptance_rate": 0.6326551270371495,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 7,
+      "branch": 2,
+      "threshold": 0.05,
+      "throughput": 172.30640012100997,
+      "speedup": 1.4129869014120198,
+      "avg_path_length": 5.437284234752589,
+      "acceptance_rate": 0.6796605293440736,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 7,
+      "branch": 3,
+      "threshold": 0.02,
+      "throughput": 155.64609992730072,
+      "speedup": 1.2763652441156528,
+      "avg_path_length": 4.81474688187821,
+      "acceptance_rate": 0.6018433602347762,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 7,
+      "branch": 3,
+      "threshold": 0.03,
+      "throughput": 132.73684019276823,
+      "speedup": 1.088499419612288,
+      "avg_path_length": 4.067460317460318,
+      "acceptance_rate": 0.5084325396825398,
+      "baseline_throughput": 121.94479647958627
+    },
+    {
+      "tokens": 500,
+      "depth": 7,
+      "branch": 3,
+      "threshold": 0.05,
+      "throughput": 153.89498160103318,
+      "speedup": 1.2620053175191892,
+      "avg_path_length": 4.6512634129456565,
+      "acceptance_rate": 0.5814079266182071,
+      "baseline_throughput": 121.94479647958627
+    }
+  ],
+  "best_overall": {
+    "tokens": 200,
+    "depth": 7,
+    "branch": 2,
+    "threshold": 0.05,
+    "throughput": 133.86717681011407,
+    "speedup": 2.4428333822760666,
+    "avg_path_length": 3.69281045751634,
+    "acceptance_rate": 0.4616013071895425,
+    "baseline_throughput": 54.79996211832741
+  },
+  "best_per_token_length": {
+    "200": {
+      "tokens": 200,
+      "depth": 7,
+      "branch": 2,
+      "threshold": 0.05,
+      "throughput": 133.86717681011407,
+      "speedup": 2.4428333822760666,
+      "avg_path_length": 3.69281045751634,
+      "acceptance_rate": 0.4616013071895425,
+      "baseline_throughput": 54.79996211832741
+    },
+    "500": {
+      "tokens": 500,
+      "depth": 7,
+      "branch": 2,
+      "threshold": 0.05,
+      "throughput": 172.30640012100997,
+      "speedup": 1.4129869014120198,
+      "avg_path_length": 5.437284234752589,
+      "acceptance_rate": 0.6796605293440736,
+      "baseline_throughput": 121.94479647958627
+    }
+  }
+}

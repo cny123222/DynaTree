@@ -1,0 +1,113 @@
+{
+  "config": {
+    "target_model": "/mnt/disk1/models/pythia-2.8b",
+    "draft_model": "/mnt/disk1/models/pythia-70m",
+    "max_new_tokens": 500,
+    "num_samples": 10,
+    "max_prompt_length": 800,
+    "timestamp": "2026-01-03T16:38:48.961895"
+  },
+  "baseline_throughput": 126.15146856508395,
+  "results": [
+    {
+      "method": "Linear (K=4)",
+      "avg_tokens_per_iter": 3.880359203354348,
+      "acceptance_rate": 97.0089800838587,
+      "avg_path_length": 3.880359203354348,
+      "throughput": 147.96481203133143,
+      "speedup": 1.172913908291076,
+      "total_rounds": 130,
+      "total_tokens": 500
+    },
+    {
+      "method": "Linear (K=5)",
+      "avg_tokens_per_iter": 4.273369445219559,
+      "acceptance_rate": 85.46738890439116,
+      "avg_path_length": 4.273369445219559,
+      "throughput": 157.40160620119065,
+      "speedup": 1.247719174350984,
+      "total_rounds": 119,
+      "total_tokens": 500
+    },
+    {
+      "method": "Linear (K=6)",
+      "avg_tokens_per_iter": 4.870377256717189,
+      "acceptance_rate": 81.17295427861983,
+      "avg_path_length": 4.870377256717189,
+      "throughput": 169.46193971589568,
+      "speedup": 1.3433211808268966,
+      "total_rounds": 106,
+      "total_tokens": 500
+    },
+    {
+      "method": "Linear (K=7)",
+      "avg_tokens_per_iter": 5.330505398700856,
+      "acceptance_rate": 76.15007712429794,
+      "avg_path_length": 5.330505398700856,
+      "throughput": 174.99513111807366,
+      "speedup": 1.3871826710268564,
+      "total_rounds": 98,
+      "total_tokens": 500
+    },
+    {
+      "method": "HF Assisted",
+      "avg_tokens_per_iter": 3.012048192771084,
+      "acceptance_rate": -1,
+      "avg_path_length": -1,
+      "throughput": 194.22933681354485,
+      "speedup": 1.5396518092323137,
+      "total_rounds": -1,
+      "total_tokens": 500
+    },
+    {
+      "method": "DynaTree (D=4,B=2)",
+      "avg_tokens_per_iter": 4.663471278018078,
+      "acceptance_rate": 93.26942556036158,
+      "avg_path_length": 4.663471278018078,
+      "throughput": 172.58261772972284,
+      "speedup": 1.3680587288659598,
+      "total_rounds": 108,
+      "total_tokens": 500
+    },
+    {
+      "method": "DynaTree (D=4,B=2)",
+      "avg_tokens_per_iter": 4.668593336861698,
+      "acceptance_rate": 93.37186673723397,
+      "avg_path_length": 4.668593336861698,
+      "throughput": 168.43939782182468,
+      "speedup": 1.3352155130475043,
+      "total_rounds": 108,
+      "total_tokens": 500
+    },
+    {
+      "method": "DynaTree (D=5,B=2)",
+      "avg_tokens_per_iter": 5.166069501982859,
+      "acceptance_rate": 86.10115836638099,
+      "avg_path_length": 5.166069501982859,
+      "throughput": 180.12073276418457,
+      "speedup": 1.4278132059259925,
+      "total_rounds": 98,
+      "total_tokens": 500
+    },
+    {
+      "method": "DynaTree (D=7,B=2)",
+      "avg_tokens_per_iter": 5.805995047858815,
+      "acceptance_rate": 72.57493809823518,
+      "avg_path_length": 5.805995047858815,
+      "throughput": 184.57139088972627,
+      "speedup": 1.4630934779368214,
+      "total_rounds": 89,
+      "total_tokens": 500
+    },
+    {
+      "method": "DynaTree (D=6,B=2)",
+      "avg_tokens_per_iter": 5.562063861651473,
+      "acceptance_rate": 79.45805516644963,
+      "avg_path_length": 5.562063861651473,
+      "throughput": 185.24505337371332,
+      "speedup": 1.4684335860754714,
+      "total_rounds": 91,
+      "total_tokens": 500
+    }
+  ]
+}

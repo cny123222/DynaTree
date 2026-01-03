@@ -1,0 +1,338 @@
+{
+  "config": {
+    "target_model": "/mnt/disk1/models/pythia-2.8b",
+    "draft_model": "/mnt/disk1/models/pythia-70m",
+    "tree_depth": 8,
+    "tree_branch": 3,
+    "tree_threshold": 0.03,
+    "streaming_cache_sizes": [
+      512,
+      1024,
+      2048
+    ],
+    "token_lengths": [
+      500,
+      1000,
+      2000
+    ],
+    "num_runs": 3
+  },
+  "results": [
+    {
+      "method": "Tree V2",
+      "max_new_tokens": 500,
+      "avg_throughput": 135.91251608646525,
+      "avg_acceptance_rate": 0.18925056775170326,
+      "avg_memory_peak_mb": 5715.38671875,
+      "compression_count": 0,
+      "runs": [
+        {
+          "tokens": 500,
+          "time": 3.680702512152493,
+          "throughput": 135.84363266228695,
+          "acceptance_rate": 0.18925056775170326,
+          "memory_peak_mb": 5715.9150390625
+        },
+        {
+          "tokens": 500,
+          "time": 3.6769734816625714,
+          "throughput": 135.9813995106435,
+          "acceptance_rate": 0.18925056775170326,
+          "memory_peak_mb": 5714.8583984375
+        }
+      ]
+    },
+    {
+      "method": "Tree V2 + Streaming (cache=512)",
+      "max_new_tokens": 500,
+      "max_cache_len": 512,
+      "avg_throughput": 99.39188504875992,
+      "avg_acceptance_rate": 0.1422070534698521,
+      "avg_memory_peak_mb": 5958.865234375,
+      "compression_count": 42.0,
+      "runs": [
+        {
+          "tokens": 500,
+          "time": 5.021584376692772,
+          "throughput": 99.57016799731667,
+          "acceptance_rate": 0.1422070534698521,
+          "memory_peak_mb": 5959.3251953125,
+          "compression_count": 42
+        },
+        {
+          "tokens": 500,
+          "time": 5.0396315567195415,
+          "throughput": 99.21360210020316,
+          "acceptance_rate": 0.1422070534698521,
+          "memory_peak_mb": 5958.4052734375,
+          "compression_count": 42
+        }
+      ]
+    },
+    {
+      "method": "Tree V2 + Streaming (cache=1024)",
+      "max_new_tokens": 500,
+      "max_cache_len": 1024,
+      "avg_throughput": 136.4630350850175,
+      "avg_acceptance_rate": 0.18925056775170326,
+      "avg_memory_peak_mb": 5715.0791015625,
+      "compression_count": 0.0,
+      "runs": [
+        {
+          "tokens": 500,
+          "time": 3.6485640294849873,
+          "throughput": 137.04021526259947,
+          "acceptance_rate": 0.18925056775170326,
+          "memory_peak_mb": 5715.0791015625,
+          "compression_count": 0
+        },
+        {
+          "tokens": 500,
+          "time": 3.6795588498935103,
+          "throughput": 135.88585490743557,
+          "acceptance_rate": 0.18925056775170326,
+          "memory_peak_mb": 5715.0791015625,
+          "compression_count": 0
+        }
+      ]
+    },
+    {
+      "method": "Tree V2 + Streaming (cache=2048)",
+      "max_new_tokens": 500,
+      "max_cache_len": 2048,
+      "avg_throughput": 136.15021627369134,
+      "avg_acceptance_rate": 0.18925056775170326,
+      "avg_memory_peak_mb": 5715.0791015625,
+      "compression_count": 0.0,
+      "runs": [
+        {
+          "tokens": 500,
+          "time": 3.68496813159436,
+          "throughput": 135.68638374727738,
+          "acceptance_rate": 0.18925056775170326,
+          "memory_peak_mb": 5715.0791015625,
+          "compression_count": 0
+        },
+        {
+          "tokens": 500,
+          "time": 3.659945696592331,
+          "throughput": 136.61404880010528,
+          "acceptance_rate": 0.18925056775170326,
+          "memory_peak_mb": 5715.0791015625,
+          "compression_count": 0
+        }
+      ]
+    },
+    {
+      "method": "Tree V2",
+      "max_new_tokens": 1000,
+      "avg_throughput": 179.2429667305464,
+      "avg_acceptance_rate": 0.25673940949935814,
+      "avg_memory_peak_mb": 5931.673828125,
+      "compression_count": 0,
+      "runs": [
+        {
+          "tokens": 1000,
+          "time": 5.596032400615513,
+          "throughput": 178.6980361103715,
+          "acceptance_rate": 0.25673940949935814,
+          "memory_peak_mb": 5931.9423828125
+        },
+        {
+          "tokens": 1000,
+          "time": 5.562109656631947,
+          "throughput": 179.7878973507213,
+          "acceptance_rate": 0.25673940949935814,
+          "memory_peak_mb": 5931.4052734375
+        }
+      ]
+    },
+    {
+      "method": "Tree V2 + Streaming (cache=512)",
+      "max_new_tokens": 1000,
+      "max_cache_len": 512,
+      "avg_throughput": 50.600467030741484,
+      "avg_acceptance_rate": 0.06347997206881228,
+      "avg_memory_peak_mb": 5978.81103515625,
+      "compression_count": 330.0,
+      "runs": [
+        {
+          "tokens": 1000,
+          "time": 19.78446789830923,
+          "throughput": 50.54470027396893,
+          "acceptance_rate": 0.06347997206881228,
+          "memory_peak_mb": 5979.10009765625,
+          "compression_count": 330
+        },
+        {
+          "tokens": 1000,
+          "time": 19.740906996652484,
+          "throughput": 50.65623378751405,
+          "acceptance_rate": 0.06347997206881228,
+          "memory_peak_mb": 5978.52197265625,
+          "compression_count": 330
+        }
+      ]
+    },
+    {
+      "method": "Tree V2 + Streaming (cache=1024)",
+      "max_new_tokens": 1000,
+      "max_cache_len": 1024,
+      "avg_throughput": 134.55356978965142,
+      "avg_acceptance_rate": 0.18615040953090098,
+      "avg_memory_peak_mb": 6453.343017578125,
+      "compression_count": 44.0,
+      "runs": [
+        {
+          "tokens": 1000,
+          "time": 7.428579866886139,
+          "throughput": 134.61523170231098,
+          "acceptance_rate": 0.18615040953090098,
+          "memory_peak_mb": 6453.546875,
+          "compression_count": 44
+        },
+        {
+          "tokens": 1000,
+          "time": 7.4353915844112635,
+          "throughput": 134.49190787699183,
+          "acceptance_rate": 0.18615040953090098,
+          "memory_peak_mb": 6453.13916015625,
+          "compression_count": 44
+        }
+      ]
+    },
+    {
+      "method": "Tree V2 + Streaming (cache=2048)",
+      "max_new_tokens": 1000,
+      "max_cache_len": 2048,
+      "avg_throughput": 179.93975706174456,
+      "avg_acceptance_rate": 0.25673940949935814,
+      "avg_memory_peak_mb": 5931.336669921875,
+      "compression_count": 0.0,
+      "runs": [
+        {
+          "tokens": 1000,
+          "time": 5.5502426931634545,
+          "throughput": 180.17230151606813,
+          "acceptance_rate": 0.25673940949935814,
+          "memory_peak_mb": 5930.90771484375,
+          "compression_count": 0
+        },
+        {
+          "tokens": 1000,
+          "time": 5.56460692640394,
+          "throughput": 179.70721260742096,
+          "acceptance_rate": 0.25673940949935814,
+          "memory_peak_mb": 5931.765625,
+          "compression_count": 0
+        }
+      ]
+    },
+    {
+      "method": "Tree V2",
+      "max_new_tokens": 2000,
+      "avg_throughput": 167.8855302161545,
+      "avg_acceptance_rate": 0.4809546769527483,
+      "avg_memory_peak_mb": 6325.58740234375,
+      "compression_count": 0,
+      "runs": [
+        {
+          "tokens": 1995,
+          "time": 11.85543823428452,
+          "throughput": 168.27720414676,
+          "acceptance_rate": 0.4809546769527483,
+          "memory_peak_mb": 6325.603515625
+        },
+        {
+          "tokens": 1995,
+          "time": 11.910884639248252,
+          "throughput": 167.49385628554901,
+          "acceptance_rate": 0.4809546769527483,
+          "memory_peak_mb": 6325.5712890625
+        }
+      ]
+    },
+    {
+      "method": "Tree V2 + Streaming (cache=512)",
+      "max_new_tokens": 2000,
+      "max_cache_len": 512,
+      "avg_throughput": 52.94464227051588,
+      "avg_acceptance_rate": 0.06145148405333989,
+      "avg_memory_peak_mb": 5981.2001953125,
+      "compression_count": 605.0,
+      "runs": [
+        {
+          "tokens": 2000,
+          "time": 37.77357960585505,
+          "throughput": 52.94706037576572,
+          "acceptance_rate": 0.06145148405333989,
+          "memory_peak_mb": 5980.88525390625,
+          "compression_count": 605
+        },
+        {
+          "tokens": 2000,
+          "time": 37.77703017834574,
+          "throughput": 52.94222416526603,
+          "acceptance_rate": 0.06145148405333989,
+          "memory_peak_mb": 5981.51513671875,
+          "compression_count": 605
+        }
+      ]
+    },
+    {
+      "method": "Tree V2 + Streaming (cache=1024)",
+      "max_new_tokens": 2000,
+      "max_cache_len": 1024,
+      "avg_throughput": 64.38043384494487,
+      "avg_acceptance_rate": 0.078000078000078,
+      "avg_memory_peak_mb": 6461.24267578125,
+      "compression_count": 450.0,
+      "runs": [
+        {
+          "tokens": 2000,
+          "time": 31.055713494308293,
+          "throughput": 64.40038804346094,
+          "acceptance_rate": 0.078000078000078,
+          "memory_peak_mb": 6461.52294921875,
+          "compression_count": 450
+        },
+        {
+          "tokens": 2000,
+          "time": 31.074970400892198,
+          "throughput": 64.36047964642881,
+          "acceptance_rate": 0.078000078000078,
+          "memory_peak_mb": 6460.96240234375,
+          "compression_count": 450
+        }
+      ]
+    },
+    {
+      "method": "Tree V2 + Streaming (cache=2048)",
+      "max_new_tokens": 2000,
+      "max_cache_len": 2048,
+      "avg_throughput": 208.3492564593847,
+      "avg_acceptance_rate": 0.3127443315089914,
+      "avg_memory_peak_mb": 7395.3916015625,
+      "compression_count": 5.0,
+      "runs": [
+        {
+          "tokens": 2000,
+          "time": 9.595255739986897,
+          "throughput": 208.4363412707467,
+          "acceptance_rate": 0.3127443315089914,
+          "memory_peak_mb": 7395.84619140625,
+          "compression_count": 5
+        },
+        {
+          "tokens": 2000,
+          "time": 9.603280250914395,
+          "throughput": 208.26217164802267,
+          "acceptance_rate": 0.3127443315089914,
+          "memory_peak_mb": 7394.93701171875,
+          "compression_count": 5
+        }
+      ]
+    }
+  ],
+  "timestamp": "20260102_122730"
+}

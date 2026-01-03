@@ -106,6 +106,10 @@ class TreeSpeculativeGenerator(SpeculativeGenerator):
             "total_paths_explored": 0,
             "avg_accepted_path_length": 0.0,
             "max_path_length_achieved": 0,
+            # 新增：基于深度的接受率统计
+            "total_accepted_depth": 0,      # 累计接受的路径深度
+            "total_max_depth": 0,           # 累计最大可能深度
+            "depth_acceptance_rate": 0.0,   # 深度接受率 = total_accepted_depth / total_max_depth
         }
     
     def reset(self):
@@ -117,6 +121,10 @@ class TreeSpeculativeGenerator(SpeculativeGenerator):
             "total_paths_explored": 0,
             "avg_accepted_path_length": 0.0,
             "max_path_length_achieved": 0,
+            # 新增：基于深度的接受率统计
+            "total_accepted_depth": 0,
+            "total_max_depth": 0,
+            "depth_acceptance_rate": 0.0,
         }
     
     @torch.inference_mode()
@@ -573,6 +581,11 @@ class TreeSpeculativeGenerator(SpeculativeGenerator):
             if num_accepted > self.tree_stats["max_path_length_achieved"]:
                 self.tree_stats["max_path_length_achieved"] = num_accepted
             
+            # 更新深度接受率统计
+            # 每轮最大可能接受 tree_depth + 1 个 tokens (包括 bonus token)
+            self.tree_stats["total_accepted_depth"] += num_accepted
+            self.tree_stats["total_max_depth"] += self.tree_depth + 1
+            
             if verbose:
                 print(f"Round {self.stats['total_rounds']}: accepted {num_accepted} tokens, total: {generated}")
             
@@ -582,10 +595,16 @@ class TreeSpeculativeGenerator(SpeculativeGenerator):
                     print("Generated EOS token, stopping.")
                 break
         
-        # Update average path length
+        # Update average path length and depth acceptance rate
         if self.stats["total_rounds"] > 0:
             self.tree_stats["avg_accepted_path_length"] = (
                 self.stats["total_tokens"] / self.stats["total_rounds"]
+            )
+        
+        # 计算深度接受率：实际接受深度 / 最大可能深度
+        if self.tree_stats["total_max_depth"] > 0:
+            self.tree_stats["depth_acceptance_rate"] = (
+                self.tree_stats["total_accepted_depth"] / self.tree_stats["total_max_depth"]
             )
         
         return self.tokenizer.decode(self.current_ids[0], skip_special_tokens=True)
@@ -596,6 +615,12 @@ class TreeSpeculativeGenerator(SpeculativeGenerator):
         stats.update(self.tree_stats)
         stats["tree_depth"] = self.tree_depth
         stats["branch_factor"] = self.branch_factor
+        
+        # 覆盖父类的 acceptance_rate，使用深度接受率作为 tree 方法的接受率
+        # 这更准确地反映了 tree 方法的效率
+        if self.tree_stats["total_max_depth"] > 0:
+            stats["acceptance_rate"] = self.tree_stats["depth_acceptance_rate"]
+        
         return stats
 
 
@@ -974,9 +999,292 @@ class TreeStreamingSpeculativeGenerator(TreeSpeculativeGenerator):
         }
 
 
+class TreeStreamingSpeculativeGeneratorV2(TreeSpeculativeGeneratorV2):
+    """
+    Tree-based Speculative Decoding V2 with StreamingLLM KV Cache Compression.
+    
+    This generator combines the optimized tree-based drafting (with probability_threshold 
+    pruning) from TreeSpeculativeGeneratorV2 with StreamingLLM cache compression for 
+    infinite-length generation with constant memory usage.
+    
+    Key Features:
+    1. Probability-based tree pruning (from V2)
+    2. StreamingLLM KV cache compression for long sequences
+    3. Constant memory usage regardless of generation length
+    
+    Args:
+        target_model: Large model for verification
+        draft_model: Small model for drafting
+        tokenizer: Tokenizer for the models
+        tree_depth: Depth of the token tree
+        branch_factor: Number of branches at each node
+        probability_threshold: Prune branches with cumulative prob < threshold
+        max_tree_nodes: Maximum number of nodes in the tree
+        max_len: Maximum total sequence length
+        device: Device to run on
+        use_compile: Whether to use torch.compile
+        start_size: Number of initial tokens to keep as attention sinks
+        recent_size: Number of recent tokens to keep
+        compress_threshold: Fraction of max_cache_len to trigger compression
+        max_cache_len: Maximum cache length before compression
+        
+    Example:
+        >>> generator = TreeStreamingSpeculativeGeneratorV2(
+        ...     target_model=target_model,
+        ...     draft_model=draft_model,
+        ...     tokenizer=tokenizer,
+        ...     tree_depth=8,
+        ...     branch_factor=3,
+        ...     probability_threshold=0.03,
+        ...     max_cache_len=1024,
+        ... )
+        >>> output = generator.generate("Hello, world!", max_new_tokens=5000)
+    """
+    
+    def __init__(
+        self,
+        target_model: PreTrainedModel,
+        draft_model: PreTrainedModel,
+        tokenizer: AutoTokenizer,
+        tree_depth: int = 8,
+        branch_factor: int = 3,
+        probability_threshold: float = 0.03,
+        max_tree_nodes: int = 128,
+        max_len: int = 8192,
+        device: str = "cuda",
+        use_compile: bool = True,
+        start_size: int = 4,
+        recent_size: int = 1020,
+        compress_threshold: float = 0.9,
+        max_cache_len: int = 1024
+    ):
+        # Initialize parent TreeSpeculativeGeneratorV2
+        super().__init__(
+            target_model=target_model,
+            draft_model=draft_model,
+            tokenizer=tokenizer,
+            tree_depth=tree_depth,
+            branch_factor=branch_factor,
+            probability_threshold=probability_threshold,
+            max_tree_nodes=max_tree_nodes,
+            max_len=max_len,
+            device=device,
+            use_compile=use_compile
+        )
+        
+        # StreamingLLM parameters
+        self.start_size = start_size
+        self.recent_size = recent_size
+        self.max_cache_len = max_cache_len
+        self.compress_threshold = compress_threshold
+        
+        # Effective cache size
+        self._effective_cache_size = start_size + recent_size
+        
+        # Compression statistics
+        self._compression_count = 0
+        self._tokens_evicted = 0
+        
+        # Valid token IDs for draft model after compression
+        self._valid_token_ids: Optional[torch.Tensor] = None
+    
+    def reset(self):
+        """Reset generator state including compression stats."""
+        super().reset()
+        self._compression_count = 0
+        self._tokens_evicted = 0
+        self._valid_token_ids = None
+    
+    def _get_cache_length(self) -> int:
+        """Get current cache length."""
+        if self.target_cache is None:
+            return 0
+        try:
+            return self.target_cache.get_seq_length()
+        except:
+            if len(self.target_cache) > 0:
+                return self.target_cache[0][0].shape[2]
+            return 0
+    
+    def _maybe_compress_cache(self):
+        """Check and apply StreamingLLM compression if needed."""
+        # Import here to avoid circular dependency
+        import sys
+        import os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        from kvcompress.methods.streaming_llm import streaming_llm_compress
+        
+        cache_len = self._get_cache_length()
+        threshold = int(self.max_cache_len * self.compress_threshold)
+        
+        if cache_len > threshold:
+            target_size = self.start_size + self.recent_size
+            tokens_to_evict = cache_len - target_size
+            
+            if tokens_to_evict > 0:
+                # Apply StreamingLLM compression
+                compressed_list = streaming_llm_compress(
+                    self.target_cache,
+                    start_size=self.start_size,
+                    recent_size=self.recent_size
+                )
+                
+                # Convert back to DynamicCache
+                cache = DynamicCache()
+                for layer_idx, (keys, values) in enumerate(compressed_list):
+                    cache.update(keys, values, layer_idx)
+                self.target_cache = cache
+                
+                # Update statistics
+                self._compression_count += 1
+                self._tokens_evicted += tokens_to_evict
+                
+                # Update valid token IDs
+                self._update_valid_token_ids()
+    
+    def _update_valid_token_ids(self):
+        """Update valid token IDs after compression."""
+        if self.current_ids is None or self.current_ids.shape[1] == 0:
+            return
+        
+        total_len = self.current_ids.shape[1]
+        
+        if total_len <= self._effective_cache_size:
+            self._valid_token_ids = None
+            return
+        
+        # Build valid token IDs: initial + recent
+        all_tokens = self.current_ids[0].tolist()
+        initial_tokens = all_tokens[:self.start_size]
+        recent_tokens = all_tokens[-self.recent_size:]
+        
+        valid_tokens = initial_tokens + recent_tokens
+        self._valid_token_ids = torch.tensor(
+            valid_tokens, device=self.device
+        ).unsqueeze(0)
+    
+    @torch.inference_mode()
+    def _draft_tree_tokens(self) -> TokenTree:
+        """
+        Generate tree with probability-based pruning, using compressed token IDs if available.
+        
+        This method combines V2's probability pruning with StreamingLLM's cache compression.
+        """
+        tree = TokenTree(
+            max_depth=self.tree_depth,
+            branch_factor=self.branch_factor,
+            max_nodes=self.max_tree_nodes,
+            device=self.device
+        )
+        
+        # Use valid token IDs if cache was compressed
+        prefill_ids = self._valid_token_ids if self._valid_token_ids is not None else self.current_ids
+        
+        # Re-prefill draft model
+        draft_outputs = self.draft_model(
+            input_ids=prefill_ids,
+            use_cache=True,
+            return_dict=True
+        )
+        
+        first_logits = draft_outputs.logits[:, -1, :]
+        log_probs = F.log_softmax(first_logits, dim=-1)
+        topk_probs, topk_tokens = torch.topk(log_probs[0], self.branch_factor)
+        
+        # Add root
+        tree.add_root(topk_tokens[0].item(), topk_probs[0].item())
+        
+        # Track active leaves (those above probability threshold)
+        active_leaves = [(0, draft_outputs.past_key_values, topk_tokens[0:1])]
+        
+        for depth in range(1, self.tree_depth + 1):
+            if len(tree) >= self.max_tree_nodes or not active_leaves:
+                break
+            
+            new_active_leaves = []
+            
+            for leaf_idx, leaf_cache, leaf_token in active_leaves:
+                leaf_node = tree.nodes[leaf_idx]
+                
+                # Check cumulative probability threshold (V2 pruning)
+                if leaf_node.cumulative_logit < torch.log(
+                    torch.tensor(self.probability_threshold)
+                ).item():
+                    continue  # Prune this branch
+                
+                # Forward
+                draft_outputs = self.draft_model(
+                    input_ids=leaf_token.unsqueeze(0),
+                    past_key_values=leaf_cache,
+                    use_cache=True,
+                    return_dict=True
+                )
+                
+                next_logits = draft_outputs.logits[:, -1, :]
+                log_probs = F.log_softmax(next_logits, dim=-1)
+                topk_probs, topk_tokens = torch.topk(log_probs[0], self.branch_factor)
+                
+                remaining = self.max_tree_nodes - len(tree)
+                num_children = min(self.branch_factor, remaining)
+                
+                for i in range(num_children):
+                    child_idx = tree.add_node(
+                        token_id=topk_tokens[i].item(),
+                        parent_idx=leaf_idx,
+                        logit=topk_probs[i].item()
+                    )
+                    new_active_leaves.append(
+                        (child_idx, draft_outputs.past_key_values, topk_tokens[i:i+1])
+                    )
+            
+            active_leaves = new_active_leaves
+        
+        self._token_tree = tree
+        return tree
+    
+    @torch.inference_mode()
+    def _update_tree_cache(
+        self,
+        accepted_path: List[int],
+        accepted_tokens: torch.Tensor,
+        original_cache_len: int
+    ):
+        """
+        Update cache with accepted path, then check for compression.
+        """
+        # Call parent implementation
+        super()._update_tree_cache(accepted_path, accepted_tokens, original_cache_len)
+        
+        # Check if compression is needed
+        self._maybe_compress_cache()
+    
+    def get_stats(self) -> dict:
+        """Get generation statistics including compression stats."""
+        stats = super().get_stats()
+        stats.update({
+            "compression_count": self._compression_count,
+            "tokens_evicted": self._tokens_evicted,
+            "current_cache_len": self._get_cache_length(),
+            "max_cache_len": self.max_cache_len,
+            "effective_cache_size": self._effective_cache_size
+        })
+        return stats
+    
+    def get_compression_config(self) -> dict:
+        """Get StreamingLLM compression configuration."""
+        return {
+            "start_size": self.start_size,
+            "recent_size": self.recent_size,
+            "max_cache_len": self.max_cache_len,
+            "compress_threshold": self.compress_threshold,
+            "effective_cache_size": self._effective_cache_size
+        }
+
+
 __all__ = [
     "TreeSpeculativeGenerator",
     "TreeSpeculativeGeneratorV2",
-    "TreeStreamingSpeculativeGenerator"
+    "TreeStreamingSpeculativeGenerator",
+    "TreeStreamingSpeculativeGeneratorV2"
 ]
 
