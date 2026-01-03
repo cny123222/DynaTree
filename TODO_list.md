@@ -44,18 +44,20 @@
 
 ---
 
-#### 4. **Acceptance Rate 和 Tokens-per-Iteration 对比表**
+#### 4. ✅ **Acceptance Rate 和 Tokens-per-Iteration 对比表** (已完成)
 **缺失原因**：SpecInfer 有详细的 token 验证分析 (Table 1, 2)  
 **内容**：
 ```
-| Method               | Avg Tokens/Iter | Acceptance Rate | Avg Path Length |
-|---------------------|----------------|-----------------|-----------------|
-| Linear (K=6)        | 2.3            | 38.3%           | 2.3             |
-| HF Assisted         | 2.8            | -               | -               |
-| DynaTree (D=8,B=3)  | 3.7            | 62.4%           | 4.1             |
+| Method                       | Tokens/Iter | Accept. Rate | Avg Path Length |
+|------------------------------|-------------|--------------|-----------------|
+| Linear (K=6)                 | 4.10        | 68.0%        | 4.10            |
+| HF Assisted                  | --          | --           | --              |
+| DynaTree (D=8, B=3, τ=0.03)  | 6.94        | 38.1%        | 6.94            |
 ```
-- **数据来源**：参数扫描结果中有 acceptance rate
+- **数据来源**：参数扫描结果 (tree_param_search_20251231_140952.json)
 - **作用**：量化证明 DynaTree 的验证效率
+- **状态**：已添加为 Table 3 (Verification Efficiency Comparison)
+- **关键发现**：DynaTree 每次迭代接受 6.94 tokens，比 Linear 多 69%
 
 ---
 
