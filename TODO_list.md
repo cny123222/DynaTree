@@ -63,15 +63,17 @@
 
 ### 🟡 **中优先级 - 强烈推荐**
 
-#### 5. **不同树结构配置的性能对比** (类似 SpecInfer Fig 10)
+#### 5. ✅ **不同树结构配置的性能对比** (已完成 - 类似 SpecInfer Fig 10)
 **内容**：
 - 固定长度 (500 tokens)，对比不同 (D, B, τ) 配置
 - 3个子图：
-  - (a) Speedup vs Depth (D=3~8, 固定B=3, τ=0.03)
-  - (b) Speedup vs Branch Factor (B=2~4, 固定D=8, τ=0.03)
-  - (c) Speedup vs Threshold (τ=0.01~0.1, 固定D=8, B=3)
+  - (a) Branch Factor vs Throughput (B=2,3,4 for different D, 固定τ=0.03)
+  - (b) Depth vs Throughput (D=3-8 for different B, 固定τ=0.03)
+  - (c) Threshold vs Throughput (τ=0.01~0.1 for different D, 固定B=3)
 - **数据来源**：已有的参数扫描数据
 - **作用**：展示动态剪枝的必要性（过大的树会降低性能）
+- **状态**：已创建 `plot_tree_config_comparison.py`，生成 Figure 5，插入论文 Hyperparameter Sensitivity 小节
+- **风格**：多线条图，类似 SpecInfer Figure 10 的样式
 
 ---
 
