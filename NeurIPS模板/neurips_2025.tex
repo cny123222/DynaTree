@@ -161,19 +161,42 @@ This rule corresponds exactly to the implementation in `TreeSpeculativeGenerator
   \fbox{%
     \begin{minipage}{0.95\linewidth}
     \small
-    \textbf{Pseudocode (one DynaTree iteration, greedy decoding).}
-    \begin{enumerate}
-      \item Draft a token tree \(\mathcal{T}\) with parameters \((D,B,\tau,N_{\max})\).
-      \item Flatten \(\mathcal{T}\) in BFS order to obtain tokens \(z_{1:n}\).
-      \item Build the tree attention mask \(\mathbf{A}\) (prefix + ancestors only).
-      \item Run one target forward pass on \(z_{1:n}\) with \(\mathbf{A}\) to get logits.
-      \item Select the longest root-to-leaf path whose tokens match target greedy predictions.
-      \item Commit the matched tokens and append one target ``bonus'' token.
-      \item Crop target KV cache back to the pre-iteration prefix and rebuild it on committed tokens.
+    \textbf{Algorithm 1: One DynaTree iteration (greedy-consistent).}
+
+    \vspace{0.25em}
+    \textbf{Input:} prefix \(x_{1:t}\), target KV cache \(\mathcal{K}_T\), draft depth \(D\), branch factor \(B\), probability threshold \(\tau\), node budget \(N_{\max}\).
+    \quad \textbf{Output:} committed tokens and updated \(\mathcal{K}_T\).
+
+    \vspace{0.35em}
+    \textbf{(A) Tree drafting with dynamic pruning (draft model \(M_D\)).}
+    \begin{enumerate}\setlength{\itemsep}{0.15em}
+      \item Run \(M_D\) on the current prefix to obtain the next-token distribution; create the root node \(u_0\) using the \(\top\!1\) token.
+      \item Initialize active leaves \(\mathcal{A}\leftarrow\{u_0\}\). For depth \(d=1,\dots,D\):
+      \begin{enumerate}\setlength{\itemsep}{0.15em}
+        \item Initialize new leaves \(\mathcal{A}'\leftarrow\emptyset\).
+        \item For each \(u\in\mathcal{A}\): \textbf{if} \(\bar{\ell}_u < \log\tau\) \textbf{then} skip expanding \(u\) (prune this branch).
+        \item Otherwise, perform a cached one-token forward pass of \(M_D\) from \(u\) and take the \(\top\!B\) next-token candidates.
+        \item Add up to \(B\) children to \(u\) (stop when \(|\mathcal{T}|=N_{\max}\)); add the created children to \(\mathcal{A}'\).
+      \end{enumerate}
+      \item Set \(\mathcal{A}\leftarrow\mathcal{A}'\). Stop early if \(\mathcal{A}\) is empty or \(|\mathcal{T}|=N_{\max}\).
+    \end{enumerate}
+
+    \textbf{(B) Parallel verification (target model \(M_T\)).}
+    \begin{enumerate}\setlength{\itemsep}{0.15em}
+      \item Serialize the remaining tree nodes in BFS order into a token list, and construct the tree causal attention mask (prefix + ancestors only).
+      \item Run a single forward pass of \(M_T\) with the tree mask to obtain per-node logits; let \(\hat{y}(u)\) be the greedy \(\top\!1\) prediction derived from each node's logits.
+    \end{enumerate}
+
+    \textbf{(C) Greedy match, commit, and cache update.}
+    \begin{enumerate}\setlength{\itemsep}{0.15em}
+      \item Let \(\hat{y}_{t+1}\) be the target model's greedy next token from the prefix (from the prefix logits \(\texttt{LastLogits}\)).
+      \item Select the longest root-to-leaf path such that the token at the root equals \(\hat{y}_{t+1}\), and each child token matches the parent-induced greedy prediction \(\hat{y}(\text{parent})\).
+      \item \textbf{If} no token matches at the root, commit \([\hat{y}_{t+1}]\). \textbf{Else} commit the matched path tokens and append one additional target greedy token after the final matched node (the ``bonus'' token).
+      \item Crop \(\mathcal{K}_T\) back to the pre-verification prefix, then run \(M_T\) on the committed tokens to rebuild \(\mathcal{K}_T\) for the next iteration.
     \end{enumerate}
     \end{minipage}
   }
-  \caption{\textbf{DynaTree iteration pseudocode.} (Rendered without algorithm packages for portability.)}
+  \caption{\textbf{DynaTree iteration pseudocode.} Each round drafts and prunes a token tree with the draft model, verifies all remaining nodes in parallel with the target model under a tree causal mask, greedily selects the longest matching path (plus a bonus token), and rebuilds the target KV cache for the committed tokens.}
   \label{fig:algo}
 \end{figure}
 
