@@ -1,0 +1,554 @@
+{
+  "benchmark_info": {
+    "target_model": "/mnt/disk1/models/pythia-2.8b",
+    "draft_model": "/mnt/disk1/models/pythia-70m",
+    "dataset": "WikiText-2 (ModelScope)",
+    "max_new_tokens": 500,
+    "num_samples": 10,
+    "max_prompt_length": 200,
+    "warmup_runs": 2
+  },
+  "results": [
+    {
+      "method": "Baseline (AR)",
+      "config": {},
+      "ttft_ms": 16.086994670331478,
+      "tpot_ms": 7.817160989716649,
+      "total_latency_ms": 3924.667489528656,
+      "throughput_tps": 127.42200684344603,
+      "total_tokens_generated": 500,
+      "prompt_tokens": 0,
+      "total_draft_tokens": 0,
+      "total_accepted_tokens": 0,
+      "acceptance_rate": 0.0,
+      "tokens_per_round": 0.0,
+      "total_rounds": 0,
+      "avg_path_length": 0.0,
+      "max_path_length": 0,
+      "prefill_flops": 1397374320640,
+      "decode_flops": 1322762240000,
+      "total_flops": 2720136560640,
+      "flops_per_token": 2645524480.0,
+      "peak_memory_mb": 5693.34326171875,
+      "speedup": 1.0
+    },
+    {
+      "method": "Tree V2 (D=4, B=2, t=0.05)",
+      "config": {
+        "tree_depth": 4,
+        "branch_factor": 2,
+        "probability_threshold": 0.05
+      },
+      "ttft_ms": 10.967376735061407,
+      "tpot_ms": 5.843729596585035,
+      "total_latency_ms": 0.0,
+      "throughput_tps": 171.4632561137259,
+      "total_tokens_generated": 500,
+      "prompt_tokens": 0,
+      "total_draft_tokens": 0,
+      "total_accepted_tokens": 0,
+      "acceptance_rate": 0.9964528773405104,
+      "tokens_per_round": 0.0,
+      "total_rounds": 101,
+      "avg_path_length": 4.982264386702552,
+      "max_path_length": 0,
+      "prefill_flops": 1397374320640,
+      "decode_flops": 8438282455040,
+      "total_flops": 9835656775680,
+      "flops_per_token": 16876564910.08,
+      "peak_memory_mb": 5722.404296875,
+      "speedup": 1.3456329904173467
+    },
+    {
+      "method": "Tree V2 (D=4, B=2, t=0.03)",
+      "config": {
+        "tree_depth": 4,
+        "branch_factor": 2,
+        "probability_threshold": 0.03
+      },
+      "ttft_ms": 11.13547720015049,
+      "tpot_ms": 5.713247304782271,
+      "total_latency_ms": 0.0,
+      "throughput_tps": 175.68183511718158,
+      "total_tokens_generated": 500,
+      "prompt_tokens": 0,
+      "total_draft_tokens": 0,
+      "total_accepted_tokens": 0,
+      "acceptance_rate": 1.0213317704264464,
+      "tokens_per_round": 0.0,
+      "total_rounds": 98,
+      "avg_path_length": 5.106658852132233,
+      "max_path_length": 0,
+      "prefill_flops": 1397374320640,
+      "decode_flops": 8187640401920,
+      "total_flops": 9585014722560,
+      "flops_per_token": 16375280803.84,
+      "peak_memory_mb": 5724.55224609375,
+      "speedup": 1.3787401365686291
+    },
+    {
+      "method": "Tree V2 (D=5, B=2, t=0.05)",
+      "config": {
+        "tree_depth": 5,
+        "branch_factor": 2,
+        "probability_threshold": 0.05
+      },
+      "ttft_ms": 10.948645137250423,
+      "tpot_ms": 5.340373122505843,
+      "total_latency_ms": 0.0,
+      "throughput_tps": 188.59997029344996,
+      "total_tokens_generated": 500,
+      "prompt_tokens": 0,
+      "total_draft_tokens": 0,
+      "total_accepted_tokens": 0,
+      "acceptance_rate": 0.9241357979441285,
+      "tokens_per_round": 0.0,
+      "total_rounds": 91,
+      "avg_path_length": 5.544814787664771,
+      "max_path_length": 0,
+      "prefill_flops": 1397374320640,
+      "decode_flops": 15480927221760,
+      "total_flops": 16878301542400,
+      "flops_per_token": 30961854443.52,
+      "peak_memory_mb": 5725.4501953125,
+      "speedup": 1.4801208595401323
+    },
+    {
+      "method": "Tree V2 (D=7, B=2, t=0.05)",
+      "config": {
+        "tree_depth": 7,
+        "branch_factor": 2,
+        "probability_threshold": 0.05
+      },
+      "ttft_ms": 10.895342845469713,
+      "tpot_ms": 5.088051143661142,
+      "total_latency_ms": 0.0,
+      "throughput_tps": 198.03522513062006,
+      "total_tokens_generated": 500,
+      "prompt_tokens": 0,
+      "total_draft_tokens": 0,
+      "total_accepted_tokens": 0,
+      "acceptance_rate": 0.8143333223534217,
+      "tokens_per_round": 0.0,
+      "total_rounds": 78,
+      "avg_path_length": 6.514666578827374,
+      "max_path_length": 0,
+      "prefill_flops": 1397374320640,
+      "decode_flops": 54335024640000,
+      "total_flops": 55732398960640,
+      "flops_per_token": 108670049280.0,
+      "peak_memory_mb": 5726.19775390625,
+      "speedup": 1.5541681538098144
+    },
+    {
+      "method": "Tree V2 (D=6, B=2, t=0.05)",
+      "config": {
+        "tree_depth": 6,
+        "branch_factor": 2,
+        "probability_threshold": 0.05
+      },
+      "ttft_ms": 10.964520927518606,
+      "tpot_ms": 5.1060545420274135,
+      "total_latency_ms": 0.0,
+      "throughput_tps": 197.85081325164708,
+      "total_tokens_generated": 500,
+      "prompt_tokens": 0,
+      "total_draft_tokens": 0,
+      "total_accepted_tokens": 0,
+      "acceptance_rate": 0.876440800038111,
+      "tokens_per_round": 0.0,
+      "total_rounds": 83,
+      "avg_path_length": 6.135085600266778,
+      "max_path_length": 0,
+      "prefill_flops": 1397374320640,
+      "decode_flops": 28574590023680,
+      "total_flops": 29971964344320,
+      "flops_per_token": 57149180047.36,
+      "peak_memory_mb": 5724.861328125,
+      "speedup": 1.5527209008309821
+    },
+    {
+      "method": "HF Assisted",
+      "config": {
+        "num_assistant_tokens": 5
+      },
+      "ttft_ms": 11.003786139190197,
+      "tpot_ms": 4.282808412797749,
+      "total_latency_ms": 0.0,
+      "throughput_tps": 242.78708912746941,
+      "total_tokens_generated": 500,
+      "prompt_tokens": 0,
+      "total_draft_tokens": 0,
+      "total_accepted_tokens": 0,
+      "acceptance_rate": 0.0,
+      "tokens_per_round": 0.0,
+      "total_rounds": 0,
+      "avg_path_length": 0.0,
+      "max_path_length": 0,
+      "prefill_flops": 0.0,
+      "decode_flops": 0.0,
+      "total_flops": 0.0,
+      "flops_per_token": 0.0,
+      "peak_memory_mb": 5687.61328125,
+      "speedup": 1.9053780044899458
+    },
+    {
+      "method": "Linear K=4",
+      "config": {
+        "K": 4
+      },
+      "ttft_ms": 11.172807216644287,
+      "tpot_ms": 6.505119326338172,
+      "total_latency_ms": 0.0,
+      "throughput_tps": 155.9057518805633,
+      "total_tokens_generated": 500,
+      "prompt_tokens": 0,
+      "total_draft_tokens": 0,
+      "total_accepted_tokens": 0,
+      "acceptance_rate": 1.0269978917669167,
+      "tokens_per_round": 4.107991567067667,
+      "total_rounds": 123,
+      "avg_path_length": 0.0,
+      "max_path_length": 0,
+      "prefill_flops": 1397374320640,
+      "decode_flops": 1649361592320,
+      "total_flops": 3046735912960,
+      "flops_per_token": 3298723184.64,
+      "peak_memory_mb": 5723.892578125,
+      "speedup": 1.223538662925888
+    },
+    {
+      "method": "Linear K=5",
+      "config": {
+        "K": 5
+      },
+      "ttft_ms": 10.932411160320044,
+      "tpot_ms": 6.162722441740334,
+      "total_latency_ms": 0.0,
+      "throughput_tps": 165.89807382587787,
+      "total_tokens_generated": 500,
+      "prompt_tokens": 0,
+      "total_draft_tokens": 0,
+      "total_accepted_tokens": 0,
+      "acceptance_rate": 0.9362900279323887,
+      "tokens_per_round": 4.681450139661943,
+      "total_rounds": 109,
+      "avg_path_length": 0.0,
+      "max_path_length": 0,
+      "prefill_flops": 1397374320640,
+      "decode_flops": 1755035473920,
+      "total_flops": 3152409794560,
+      "flops_per_token": 3510070947.84,
+      "peak_memory_mb": 5725.04638671875,
+      "speedup": 1.3019577852804072
+    },
+    {
+      "method": "Linear K=6",
+      "config": {
+        "K": 6
+      },
+      "ttft_ms": 10.9668361954391,
+      "tpot_ms": 5.850162154249847,
+      "total_latency_ms": 0.0,
+      "throughput_tps": 175.63753023621797,
+      "total_tokens_generated": 500,
+      "prompt_tokens": 0,
+      "total_draft_tokens": 0,
+      "total_accepted_tokens": 0,
+      "acceptance_rate": 0.8745936412650677,
+      "tokens_per_round": 5.247561847590406,
+      "total_rounds": 98,
+      "avg_path_length": 0.0,
+      "max_path_length": 0,
+      "prefill_flops": 1397374320640,
+      "decode_flops": 1841750220800,
+      "total_flops": 3239124541440,
+      "flops_per_token": 3683500441.6,
+      "peak_memory_mb": 5725.05517578125,
+      "speedup": 1.3783924346130476
+    },
+    {
+      "method": "Linear K=7",
+      "config": {
+        "K": 7
+      },
+      "ttft_ms": 10.889500565826893,
+      "tpot_ms": 5.857967677153647,
+      "total_latency_ms": 0.0,
+      "throughput_tps": 178.18705344064813,
+      "total_tokens_generated": 500,
+      "prompt_tokens": 0,
+      "total_draft_tokens": 0,
+      "total_accepted_tokens": 0,
+      "acceptance_rate": 0.8056914276866465,
+      "tokens_per_round": 5.639839993806524,
+      "total_rounds": 92,
+      "avg_path_length": 0.0,
+      "max_path_length": 0,
+      "prefill_flops": 1397374320640,
+      "decode_flops": 1976695808000,
+      "total_flops": 3374070128640,
+      "flops_per_token": 3953391616.0,
+      "peak_memory_mb": 5726.02490234375,
+      "speedup": 1.3984009344600368
+    },
+    {
+      "method": "Streaming K=5 cache=1024",
+      "config": {
+        "K": 5,
+        "max_cache_len": 1024
+      },
+      "ttft_ms": 11.066456884145737,
+      "tpot_ms": 6.155551370792091,
+      "total_latency_ms": 0.0,
+      "throughput_tps": 166.2184124518146,
+      "total_tokens_generated": 500,
+      "prompt_tokens": 0,
+      "total_draft_tokens": 0,
+      "total_accepted_tokens": 0,
+      "acceptance_rate": 0.9362900279323887,
+      "tokens_per_round": 0.0,
+      "total_rounds": 0,
+      "avg_path_length": 0.0,
+      "max_path_length": 0,
+      "prefill_flops": 0.0,
+      "decode_flops": 0.0,
+      "total_flops": 0.0,
+      "flops_per_token": 0.0,
+      "peak_memory_mb": 5725.04638671875,
+      "speedup": 1.304471782931773
+    },
+    {
+      "method": "Streaming K=6 cache=512",
+      "config": {
+        "K": 6,
+        "max_cache_len": 512
+      },
+      "ttft_ms": 10.987374559044838,
+      "tpot_ms": 5.875528368540108,
+      "total_latency_ms": 0.0,
+      "throughput_tps": 174.98431272740723,
+      "total_tokens_generated": 500,
+      "prompt_tokens": 0,
+      "total_draft_tokens": 0,
+      "total_accepted_tokens": 0,
+      "acceptance_rate": 0.8745936412650677,
+      "tokens_per_round": 0.0,
+      "total_rounds": 0,
+      "avg_path_length": 0.0,
+      "max_path_length": 0,
+      "prefill_flops": 0.0,
+      "decode_flops": 0.0,
+      "total_flops": 0.0,
+      "flops_per_token": 0.0,
+      "peak_memory_mb": 5725.05517578125,
+      "speedup": 1.3732660241523074
+    }
+  ],
+  "acceptance_comparison": {
+    "linear_methods": [
+      {
+        "method": "Linear K=4",
+        "acceptance_rate": 1.0269978917669167,
+        "tokens_per_round": 4.107991567067667,
+        "total_rounds": 123
+      },
+      {
+        "method": "Linear K=5",
+        "acceptance_rate": 0.9362900279323887,
+        "tokens_per_round": 4.681450139661943,
+        "total_rounds": 109
+      },
+      {
+        "method": "Linear K=6",
+        "acceptance_rate": 0.8745936412650677,
+        "tokens_per_round": 5.247561847590406,
+        "total_rounds": 98
+      },
+      {
+        "method": "Linear K=7",
+        "acceptance_rate": 0.8056914276866465,
+        "tokens_per_round": 5.639839993806524,
+        "total_rounds": 92
+      }
+    ],
+    "tree_methods": [
+      {
+        "method": "Tree V2 (D=4, B=2, t=0.05)",
+        "acceptance_rate": 0.9964528773405104,
+        "avg_path_length": 4.982264386702552,
+        "total_rounds": 101
+      },
+      {
+        "method": "Tree V2 (D=4, B=2, t=0.03)",
+        "acceptance_rate": 1.0213317704264464,
+        "avg_path_length": 5.106658852132233,
+        "total_rounds": 98
+      },
+      {
+        "method": "Tree V2 (D=5, B=2, t=0.05)",
+        "acceptance_rate": 0.9241357979441285,
+        "avg_path_length": 5.544814787664771,
+        "total_rounds": 91
+      },
+      {
+        "method": "Tree V2 (D=7, B=2, t=0.05)",
+        "acceptance_rate": 0.8143333223534217,
+        "avg_path_length": 6.514666578827374,
+        "total_rounds": 78
+      },
+      {
+        "method": "Tree V2 (D=6, B=2, t=0.05)",
+        "acceptance_rate": 0.876440800038111,
+        "avg_path_length": 6.135085600266778,
+        "total_rounds": 83
+      }
+    ],
+    "analysis": {
+      "avg_linear_acceptance": 0.9108932471627549,
+      "avg_linear_tokens_per_round": 4.919210887031635,
+      "avg_tree_acceptance": 0.9265389136205237,
+      "avg_tree_path_length": 5.656698041118742
+    }
+  },
+  "rankings": {
+    "by_throughput": [
+      {
+        "rank": 1,
+        "method": "HF Assisted",
+        "throughput": 242.78708912746941,
+        "speedup": 1.9053780044899458
+      },
+      {
+        "rank": 2,
+        "method": "Tree V2 (D=7, B=2, t=0.05)",
+        "throughput": 198.03522513062006,
+        "speedup": 1.5541681538098144
+      },
+      {
+        "rank": 3,
+        "method": "Tree V2 (D=6, B=2, t=0.05)",
+        "throughput": 197.85081325164708,
+        "speedup": 1.5527209008309821
+      },
+      {
+        "rank": 4,
+        "method": "Tree V2 (D=5, B=2, t=0.05)",
+        "throughput": 188.59997029344996,
+        "speedup": 1.4801208595401323
+      },
+      {
+        "rank": 5,
+        "method": "Linear K=7",
+        "throughput": 178.18705344064813,
+        "speedup": 1.3984009344600368
+      },
+      {
+        "rank": 6,
+        "method": "Tree V2 (D=4, B=2, t=0.03)",
+        "throughput": 175.68183511718158,
+        "speedup": 1.3787401365686291
+      },
+      {
+        "rank": 7,
+        "method": "Linear K=6",
+        "throughput": 175.63753023621797,
+        "speedup": 1.3783924346130476
+      },
+      {
+        "rank": 8,
+        "method": "Streaming K=6 cache=512",
+        "throughput": 174.98431272740723,
+        "speedup": 1.3732660241523074
+      },
+      {
+        "rank": 9,
+        "method": "Tree V2 (D=4, B=2, t=0.05)",
+        "throughput": 171.4632561137259,
+        "speedup": 1.3456329904173467
+      },
+      {
+        "rank": 10,
+        "method": "Streaming K=5 cache=1024",
+        "throughput": 166.2184124518146,
+        "speedup": 1.304471782931773
+      },
+      {
+        "rank": 11,
+        "method": "Linear K=5",
+        "throughput": 165.89807382587787,
+        "speedup": 1.3019577852804072
+      },
+      {
+        "rank": 12,
+        "method": "Linear K=4",
+        "throughput": 155.9057518805633,
+        "speedup": 1.223538662925888
+      },
+      {
+        "rank": 13,
+        "method": "Baseline (AR)",
+        "throughput": 127.42200684344603,
+        "speedup": 1.0
+      }
+    ],
+    "by_acceptance_rate": [
+      {
+        "rank": 1,
+        "method": "Linear K=4",
+        "acceptance_rate": 1.0269978917669167
+      },
+      {
+        "rank": 2,
+        "method": "Tree V2 (D=4, B=2, t=0.03)",
+        "acceptance_rate": 1.0213317704264464
+      },
+      {
+        "rank": 3,
+        "method": "Tree V2 (D=4, B=2, t=0.05)",
+        "acceptance_rate": 0.9964528773405104
+      },
+      {
+        "rank": 4,
+        "method": "Linear K=5",
+        "acceptance_rate": 0.9362900279323887
+      },
+      {
+        "rank": 5,
+        "method": "Streaming K=5 cache=1024",
+        "acceptance_rate": 0.9362900279323887
+      },
+      {
+        "rank": 6,
+        "method": "Tree V2 (D=5, B=2, t=0.05)",
+        "acceptance_rate": 0.9241357979441285
+      },
+      {
+        "rank": 7,
+        "method": "Tree V2 (D=6, B=2, t=0.05)",
+        "acceptance_rate": 0.876440800038111
+      },
+      {
+        "rank": 8,
+        "method": "Linear K=6",
+        "acceptance_rate": 0.8745936412650677
+      },
+      {
+        "rank": 9,
+        "method": "Streaming K=6 cache=512",
+        "acceptance_rate": 0.8745936412650677
+      },
+      {
+        "rank": 10,
+        "method": "Tree V2 (D=7, B=2, t=0.05)",
+        "acceptance_rate": 0.8143333223534217
+      },
+      {
+        "rank": 11,
+        "method": "Linear K=7",
+        "acceptance_rate": 0.8056914276866465
+      }
+    ]
+  },
+  "timestamp": "2026-01-03T17:01:03.117939"
+}

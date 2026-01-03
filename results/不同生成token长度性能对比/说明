@@ -1,0 +1,4 @@
+对比不同tokens生成长度下的结果
+文件名中的xxx tokens即为强制要求模型输出的tokens长度
+运行命令行：
+python papers/benchmark_wikitext.py   --max-prompt-length 800  --warmup-runs 2 --num-samples 10   --max-new-tokens xxx
