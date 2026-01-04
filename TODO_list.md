@@ -1,3 +1,51 @@
+## 🎉 **组员新完成的实验 (2026-01-04 更新)**
+
+你的组员完成了非常全面的补充实验！以下是新增的实验数据：
+
+### ✅ **1. 接受率 Benchmark** (`results/接受率benchmark结果.json`)
+- **配置**：WikiText-2, 500 tokens, 10 samples
+- **关键数据**：
+  - DynaTree (D=6, B=2): 185.25 t/s, 1.468×, 79.5% acceptance
+  - DynaTree (D=7, B=2): 184.57 t/s, 1.463×, 72.6% acceptance
+  - Linear K=6: 169.46 t/s, 1.343×, 81.2% acceptance
+  - Linear K=7: 175.00 t/s, 1.387×, 76.2% acceptance
+- **作用**：补充 Table 1 缺失的 acceptance rate 数据
+
+### ✅ **2. 跨数据集对比** (`results/两个数据集上单图benchmark结果/`)
+- **PG19** (长文本，max_prompt=1000):
+  - Baseline: 125.95 t/s
+  - DynaTree (D=6): 165.73 t/s (1.316×)
+  - HF Assisted: 184.83 t/s (1.467×)
+- **WikiText** (标准，max_prompt=800):
+  - Baseline: 133.23 t/s
+  - DynaTree (D=6): 185.26 t/s (1.390×)
+  - HF Assisted: 209.79 t/s (1.575×)
+- **作用**：证明 DynaTree 在不同数据集上的泛化能力
+
+### ✅ **3. 不同生成长度对比** (`results/不同生成token长度性能对比/`)
+- **数据文件**：100/200/500/750/1000 tokens
+- **关键发现**：
+  - 100 tokens: 73.49 → 113.39 t/s (1.543×)
+  - 500 tokens: 133.23 → 185.26 t/s (1.390×)
+  - 1000 tokens: 130.96 → 190.40 t/s (1.454×)
+- **作用**：用真实数据更新 Figure 4，不再需要估算
+
+### ✅ **4. 不同 Prompt 长度对比** (`results/最大prompts长度对比效果/`)
+- **数据文件**：100/200/800/1000 max_prompts
+- **固定生成**：500 tokens
+- **作用**：分析 prompt 长度对性能的影响
+
+### 📊 **数据覆盖度**：
+- ✅ TTFT/TPOT：所有实验已包含
+- ✅ Peak Memory：所有实验已包含
+- ✅ Acceptance Rate：已完整收集
+- ✅ Tokens per Iteration：已完整收集
+- ✅ 多数据集：PG19 + WikiText
+- ✅ 多长度：100-1000 tokens
+- ✅ 多配置：不同 D/B/τ 参数
+
+---
+
 ## 📊 **需要补充的图表 (按优先级排序)**
 
 ### 🔴 **高优先级 - 必须补充**
@@ -38,9 +86,18 @@
 - X轴：生成长度 (100, 200, 300, 500, 1000 tokens)
 - Y轴：Throughput (tokens/sec)
 - 曲线：AR, HF Assisted, Linear, DynaTree
-- **数据来源**：你们已有的 length scaling 实验数据
+- **数据来源**：✅ **组员已完成实验** - `results/不同生成token长度性能对比/`
+  - wikitext_benchmark_100tokens.json
+  - wikitext_benchmark_200tokens.json
+  - wikitext_benchmark_500tokens.json
+  - wikitext_benchmark_750tokens.json
+  - wikitext_benchmark_1000tokens.json
 - **作用**：展示 DynaTree 在不同长度下的稳定性
-- **状态**：已创建 `plot_length_scaling.py`，生成 Figure 4，插入论文
+- **状态**：✅ 已有真实数据，可以用真实数据更新 Figure 4（当前是估算值）
+- **关键数据**：
+  - 100 tokens: DynaTree 113.39 t/s (1.543×)
+  - 500 tokens: DynaTree 185.26 t/s (1.390×)
+  - 1000 tokens: DynaTree 190.40 t/s (1.454×)
 
 ---
 
@@ -50,14 +107,15 @@
 ```
 | Method                       | Tokens/Iter | Accept. Rate | Avg Path Length |
 |------------------------------|-------------|--------------|-----------------|
-| Linear (K=6)                 | 4.10        | 68.0%        | 4.10            |
-| HF Assisted                  | --          | --           | --              |
-| DynaTree (D=8, B=3, τ=0.03)  | 6.94        | 38.1%        | 6.94            |
+| Linear (K=6)                 | 4.87        | 81.2%        | 4.87            |
+| Linear (K=7)                 | 5.33        | 76.2%        | 5.33            |
+| DynaTree (D=6, B=2)          | 5.56        | 79.5%        | 5.56            |
+| DynaTree (D=7, B=2)          | 5.81        | 72.6%        | 5.81            |
 ```
-- **数据来源**：参数扫描结果 (tree_param_search_20251231_140952.json)
+- **数据来源**：✅ **组员已完成实验** - `results/接受率benchmark结果.json`
 - **作用**：量化证明 DynaTree 的验证效率
-- **状态**：已添加为 Table 3 (Verification Efficiency Comparison)
-- **关键发现**：DynaTree 每次迭代接受 6.94 tokens，比 Linear 多 69%
+- **状态**：✅ 已有真实数据，可以更新论文 Table 1 的 acceptance rate 列
+- **关键发现**：DynaTree (D=6) 每轮接受 5.56 tokens，比 Linear K=6 多 14%
 
 ---
 
@@ -91,39 +149,82 @@ Linear (K=6):            133.1 tok/s, 1.11× ███████████�
 
 ---
 
-#### 7. **内存使用对比**
+#### 7. 🆕 **跨数据集性能对比图** (新发现 - 可立即制作)
+**数据来源**：✅ **组员已完成实验**
+- `results/两个数据集上单图benchmark结果/pg19_benchmark_单图结果.json`
+- `results/两个数据集上单图benchmark结果/wikitext_benchmark_单图结果.json`
+
+**内容**：
+- 双柱状图对比（PG19 vs WikiText）
+- 方法：Baseline, Linear K=6, Linear K=7, DynaTree (D=6), DynaTree (D=7), HF Assisted
+- **关键发现**：
+  - **PG19** (长文本): DynaTree (D=6) 165.73 t/s (1.316×)
+  - **WikiText** (标准): DynaTree (D=6) 185.26 t/s (1.390×)
+- **作用**：证明 DynaTree 在不同数据集上的泛化能力和鲁棒性
+
+---
+
+#### 8. 🆕 **Prompt长度影响分析图** (新发现 - 可立即制作)
+**数据来源**：✅ **组员已完成实验** - `results/最大prompts长度对比效果/`
+- wikitext_benchmark_100max_prompts.json
+- wikitext_benchmark_200max_prompts.json
+- wikitext_benchmark_800max_prompts.json
+- wikitext_benchmark_1000max_prompts.json
+
+**内容**：
+- X轴：Prompt长度 (100, 200, 800, 1000 tokens)
+- Y轴：Throughput (t/s)
+- 曲线：AR Baseline, Linear, DynaTree
+- **作用**：
+  - 展示不同prompt长度下的性能稳定性
+  - 证明 DynaTree 在长prompt场景下仍有优势
+- **优先级**：中等（可作为补充分析）
+
+---
+
+#### 9. **内存使用对比** (有部分数据)
 **缺失原因**：作业明确要求"更省显存"  
+**数据来源**：✅ 实验结果中已包含 `peak_memory_mb` 字段
+- PG19数据集：AR (5855 MB) vs DynaTree (5883 MB)
+- WikiText数据集：AR (5798 MB) vs DynaTree (5822 MB)
+
 **内容**：
 ```
-| Method          | Peak Memory (GB) | KV Cache Size (MB) |
-|----------------|------------------|--------------------|
-| AR             | 5.2              | 45                 |
-| Linear (K=8)   | 5.4              | 48                 |
-| DynaTree       | 5.6              | 52 (pruned tree)   |
+| Method          | Peak Memory (MB) | 相对增长 |
+|-----------------|------------------|---------|
+| AR Baseline     | 5798             | 1.00×   |
+| Linear K=6      | 5786             | 1.00×   |
+| DynaTree (D=6)  | 5823             | 1.00×   |
+| HF Assisted     | 5732             | 0.99×   |
 ```
-- **需要新实验**：用 `torch.cuda.max_memory_allocated()` 测量
-- **作用**：证明 DynaTree 的内存开销可控
+- **作用**：证明 DynaTree 的内存开销可控（仅增加 0.4%）
+- **状态**：✅ 可以直接从现有实验数据提取制作
 
 ---
 
 ### 🟢 **低优先级 - 可选补充**
 
-#### 8. **TTFT 和 TPOT 指标** (Table)
-**缺失原因**：作业要求报告这些指标  
+#### 10. ✅ **TTFT 和 TPOT 指标** (已有数据)
+**状态**：✅ 所有实验结果已包含
 **内容**：
 ```
-| Method     | TTFT (ms) | TPOT (ms) | Throughput |
-|-----------|-----------|-----------|------------|
-| AR        | 42.1      | 8.4       | 119.4      |
-| DynaTree  | 98.3      | 5.2       | 193.4      |
+| Method           | TTFT (ms) | TPOT (ms) | Throughput |
+|-----------------|-----------|-----------|------------|
+| AR Baseline     | 18.69     | 7.47      | 133.23     |
+| Linear K=6      | 12.17     | 6.16      | 167.69     |
+| DynaTree (D=6)  | 12.48     | 5.46      | 185.26     |
+| HF Assisted     | 12.54     | 5.08      | 209.79     |
 ```
-- **说明**：TTFT 会更高（因为要先构建树），但 TPOT 更低
+- **说明**：DynaTree 的 TTFT 略高于 Linear，但 TPOT 更低（验证效率高）
+- **可以添加**：在论文中作为补充分析
 
 ---
 
-#### 9. **不同 Batch Size 的性能** (如果有条件)
+#### 11. **不同 Batch Size 的性能** (未测试)
 **内容**：Batch Size = 1, 2, 4, 8 下的性能对比
 - **说明**：SpecInfer 发现大 batch size 下收益减小
+- **状态**：当前所有实验都是 batch=1
+- **优先级**：低（如果时间允许可以补充）
 
 ---
 
@@ -131,97 +232,201 @@ Linear (K=6):            133.1 tok/s, 1.11× ███████████�
 
 ### 🔴 **必须补充**
 
-#### 1. **在 WikiText 和 PG-19 数据集上的测试**
+#### 1. ✅ **在 WikiText 和 PG-19 数据集上的测试** (已完成)
 **作业要求原文**：
 > 在 pg-19, wikitext 等数据集上进行 ppl 测试和加速测试
 
-**需要做的**：
-```python
-# WikiText-103
-dataset = load_dataset("wikitext", "wikitext-103-v1")
-test_samples = dataset['test'][:10]  # 取10个样本
+**状态**：✅ **组员已完成实验**
+- PG19数据集：`results/两个数据集上单图benchmark结果/pg19_benchmark_单图结果.json`
+  - 10个样本，500 tokens生成
+  - Max prompt length: 1000 tokens
+  - DynaTree最优配置: D=6, B=2 → 165.73 t/s (1.316×)
+- WikiText数据集：`results/两个数据集上单图benchmark结果/wikitext_benchmark_单图结果.json`
+  - 10个样本，500 tokens生成
+  - Max prompt length: 800 tokens
+  - DynaTree最优配置: D=6, B=2 → 185.26 t/s (1.390×)
 
-# PG-19 (超长文本)
-dataset = load_dataset("pg19")
-test_sample = dataset['test'][0]  # 取1个长样本
-
-# 测试指标：
-# 1. PPL (perplexity) - 证明不损害质量
-# 2. Throughput - 加速效果
-# 3. 不同 prompt 长度的性能
-```
+**关键指标**：
+- ✅ Throughput - 加速效果已测试
+- ✅ Acceptance Rate - 已记录
+- ✅ TTFT/TPOT - 已记录
+- ✅ Peak Memory - 已记录
+- ⚠️ PPL (perplexity) - 需要单独测试（见下）
 
 ---
 
-#### 2. **PPL 测试 (证明正确性)**
+#### 2. ⚠️ **PPL 测试 (证明正确性)** (待确认是否需要)
 **作业要求**：明确要求 ppl 测试  
-**实验设计**：
+**讨论结果**：组员认为 PPL 对于生成新tokens的场景没有意义
+- PPL 主要用于复现已有文本（如语言模型评估）
+- Speculative Decoding 是生成新tokens，采用 greedy decoding 保证输出与 AR 完全一致
+- **建议**：在论文中简短说明"DynaTree 采用 greedy verification，保证输出与 AR 一致"
+
+**如果仍需测试**：
 ```python
 # 目的：证明 DynaTree 输出与 AR 完全一致
 # 方法：
 # 1. 用 AR 生成 1000 tokens，计算 ppl
 # 2. 用 DynaTree 生成相同的 1000 tokens (greedy 保证一致)
 # 3. 验证两者 ppl 完全相同
-
-# 预期结果：
-# AR:       PPL = 12.34
-# DynaTree: PPL = 12.34 (完全相同)
 ```
 
 ---
 
-#### 3. **内存使用测量**
-**代码**：
-```python
-import torch
+#### 3. ✅ **内存使用测量** (已完成)
+**状态**：✅ 实验结果中已包含 `peak_memory_mb` 字段
+- 所有方法的峰值内存使用已记录
+- 可以直接从现有数据提取分析
 
-torch.cuda.reset_peak_memory_stats()
-# 运行 DynaTree
-peak_memory = torch.cuda.max_memory_allocated() / 1024**3  # GB
+**示例数据** (WikiText, 500 tokens):
+```
+AR Baseline:     5798 MB
+Linear K=6:      5786 MB
+DynaTree (D=6):  5823 MB (+0.4%)
+HF Assisted:     5732 MB
 ```
 
 ---
 
 ### 🟡 **推荐补充**
 
-#### 4. **TTFT 和 TPOT 测量**
-```python
-import time
+#### 4. ✅ **TTFT 和 TPOT 测量** (已完成)
+**状态**：✅ 实验结果中已包含 `ttft_ms` 和 `tpot_ms` 字段
+- TTFT: Time To First Token (ms)
+- TPOT: Time Per Output Token (ms)
 
-# TTFT: Time To First Token
-start = time.time()
-first_token = generate_first_token()
-ttft = time.time() - start
-
-# TPOT: Time Per Output Token
-start = time.time()
-output = generate(n_tokens=100)
-tpot = (time.time() - start) / 100
+**示例数据** (WikiText, 500 tokens):
+```
+Method           TTFT (ms)  TPOT (ms)  Throughput
+AR Baseline      18.69      7.47       133.23
+Linear K=6       12.17      6.16       167.69
+DynaTree (D=6)   12.48      5.46       185.26
+HF Assisted      12.54      5.08       209.79
 ```
 
----
-
-#### 5. **不同 Prompt 长度的性能**
-**实验**：固定生成 500 tokens，改变 prompt 长度
-- Prompt lengths: 50, 100, 200, 500, 1000 tokens
-- 测试 DynaTree 是否在长 prompt 下仍有优势
+**分析**：
+- DynaTree 的 TTFT 略高于 Linear（因为需要构建树）
+- DynaTree 的 TPOT 更低（并行验证效率高）
 
 ---
 
-## 📋 **优先级总结**
+#### 5. ✅ **不同 Prompt 长度的性能** (已完成)
+**状态**：✅ **组员已完成实验** - `results/最大prompts长度对比效果/`
+- Prompt lengths: 100, 200, 800, 1000 tokens
+- 固定生成 500 tokens
+- **发现**：DynaTree 在长 prompt 下仍保持优势
 
-### **本周必须完成 (高优先级)**：
-1. ✅ 时间轴对比图 → 快速画图工具 (PPT/Figma)
-2. ✅ Tree Attention Mask 可视化 → Python matplotlib
-3. ✅ WikiText/PG-19 数据集实验 → 运行实验脚本
-4. ✅ PPL 测试 → 简单实验验证正确性
-5. ✅ Acceptance Rate 表格 → 整理现有数据
+---
 
-### **推荐完成 (中优先级)**：
-6. ⭐ 树结构配置对比图 → 现有数据可视化
-7. ⭐ 内存使用测量 → 简单实验
-8. ⭐ 消融实验可视化 → 现有数据转图表
+#### 6. ✅ **不同生成长度的性能** (已完成)
+**状态**：✅ **组员已完成实验** - `results/不同生成token长度性能对比/`
+- Generation lengths: 100, 200, 500, 750, 1000 tokens
+- **发现**：
+  - 短序列 (100 tokens): 加速比高 (1.54×)，但绝对吞吐低
+  - 中等序列 (500 tokens): 平衡点，吞吐和加速比都好 (1.39×)
+  - 长序列 (1000 tokens): 吞吐最高，加速比稳定 (1.45×)
 
-### **可选补充 (低优先级)**：
-9. TTFT/TPOT 表格
-10. 不同 batch size 性能
+---
+
+## 📋 **优先级总结 (更新于 2026-01-04)**
+
+### ✅ **已完成项**：
+1. ✅ WikiText/PG-19 数据集实验 - 组员已完成所有实验
+2. ✅ Acceptance Rate 数据收集 - 已有完整数据
+3. ✅ 不同生成长度实验 (100/200/500/750/1000) - 已完成
+4. ✅ 不同 Prompt 长度实验 (100/200/800/1000) - 已完成
+5. ✅ TTFT/TPOT 测量 - 所有实验结果已包含
+6. ✅ 内存使用测量 - 所有实验结果已包含
+7. ✅ 参数扫描可视化图 (Figure 3) - 已插入论文
+8. ✅ 消融实验可视化图 (Figure 6) - 已插入论文
+9. ✅ 树配置对比图 (Figure 5) - 已插入论文
+
+---
+
+### 🔴 **立即可做 (有真实数据)**：
+
+#### **论文内容更新**：
+1. 🔥 **更新 Table 1 的 Acceptance Rate 列**
+   - 数据源：`results/接受率benchmark结果.json`
+   - 操作：补充所有方法的 acceptance rate 和 tokens/iter
+   - 时间：10分钟
+
+2. 🔥 **更新 Figure 4 (Length Scaling) 为真实数据**
+   - 数据源：`results/不同生成token长度性能对比/`
+   - 操作：用真实数据替换当前的估算值
+   - 时间：15分钟
+
+3. 🔥 **添加跨数据集对比图 (新Figure)**
+   - 数据源：`results/两个数据集上单图benchmark结果/`
+   - 内容：PG19 vs WikiText 双柱状图对比
+   - 作用：证明泛化能力
+   - 时间：20分钟
+
+4. 🔥 **添加 Prompt 长度影响分析图 (可选新Figure)**
+   - 数据源：`results/最大prompts长度对比效果/`
+   - 内容：不同 prompt 长度下的性能曲线
+   - 作用：补充分析
+   - 时间：20分钟
+
+5. 🔥 **添加内存使用对比表/图**
+   - 数据源：所有实验的 `peak_memory_mb` 字段
+   - 内容：证明 DynaTree 内存开销可控
+   - 时间：15分钟
+
+#### **论文文本更新**：
+6. 🔥 **补充跨数据集实验段落**
+   - 位置：Experiments 章节
+   - 内容：讨论 PG19 和 WikiText 上的性能
+   - 时间：10分钟
+
+7. 🔥 **更新 Length Scaling 段落的具体数值**
+   - 位置：Figure 4 对应段落
+   - 内容：引用真实的 100/500/1000 tokens 数据
+   - 时间：5分钟
+
+---
+
+### 🟡 **中优先级 (需要手动制作)**：
+8. ⏳ **时间轴对比图** (概念图)
+   - 工具：PPT/Figma/Python
+   - 时间：30分钟
+   - 作用：直观展示 DynaTree 优势
+
+9. ⏳ **Tree Attention Mask 可视化** (概念图)
+   - 工具：Python matplotlib
+   - 时间：30分钟
+   - 作用：解释并行验证机制
+
+---
+
+### 🟢 **低优先级/可选**：
+10. PPL 测试 (讨论后认为不必要，除非导师要求)
+11. 不同 batch size 性能 (当前都是 batch=1)
+
+---
+
+### 📊 **建议立即行动计划** (2小时完成核心更新)：
+
+**Phase 1: 数据更新 (60分钟)**
+1. 更新 Table 1 - 补充 acceptance rate (10min)
+2. 重新生成 Figure 4 - 用真实数据 (15min)
+3. 生成跨数据集对比图 - 新Figure 7 (20min)
+4. 生成内存使用对比表 - 新Table (15min)
+
+**Phase 2: 文本更新 (30分钟)**
+5. 补充跨数据集分析段落 (10min)
+6. 更新 Length Scaling 段落数值 (5min)
+7. 添加内存分析段落 (10min)
+8. 检查全文一致性 (5min)
+
+**Phase 3: 可选增强 (30分钟)**
+9. Prompt 长度影响图 (20min)
+10. 最终校对 (10min)
+
+---
+
+### 🎯 **关键改进点**：
+- ✅ 不再依赖"估算"数据，全部使用真实实验结果
+- ✅ 补充跨数据集对比，增强论文说服力
+- ✅ 详细的 acceptance rate 分析，对标 SpecInfer 论文风格
+- ✅ 内存使用分析，回应作业"更省显存"的要求
