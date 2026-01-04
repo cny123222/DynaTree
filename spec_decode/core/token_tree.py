@@ -297,6 +297,39 @@ class TokenTree:
         
         return self._flattened_tokens, self._flattened_positions
     
+    def flatten_for_verification_with_positions(self) -> Tuple[torch.Tensor, List[int], torch.Tensor]:
+        """
+        Flatten the tree into a sequence for parallel verification with position IDs.
+        
+        This method returns depth-based position IDs that should be used with
+        RoPE-based models to ensure correct position encoding. Nodes at the
+        same depth share the same position ID, which correctly reflects their
+        semantic position in the sequence.
+        
+        The flattening order is BFS (breadth-first), which ensures that
+        parent tokens appear before their children in the sequence.
+        
+        Returns:
+            flattened_tokens: Token IDs in BFS order [num_nodes]
+            node_indices: Mapping from position to node index
+            position_ids: Depth-based position for each node [num_nodes]
+                         Nodes at the same depth have the same position ID.
+        """
+        # First call the base flatten method to ensure caching
+        flattened_tokens, node_indices = self.flatten_for_verification()
+        
+        # Build position_ids based on node depth
+        position_ids = []
+        for node_idx in node_indices:
+            node = self.nodes[node_idx]
+            position_ids.append(node.depth)
+        
+        position_ids_tensor = torch.tensor(
+            position_ids, dtype=torch.long, device=self.device
+        )
+        
+        return flattened_tokens, node_indices, position_ids_tensor
+    
     def build_tree_attention_mask(self, prefix_len: int = 0) -> torch.Tensor:
         """
         Build the tree attention mask for parallel verification.
@@ -507,6 +540,7 @@ __all__ = [
     "TokenTree",
     "build_tree_from_topk"
 ]
+
 
 
 

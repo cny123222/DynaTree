@@ -1,0 +1,57 @@
+% 自适应树结构消融实验 - LaTeX 表格
+% Table 2: Ablation Study Results
+
+\begin{table*}[t]
+\centering
+\caption{Ablation Study: Contribution of Each Adaptive Component}
+\label{tab:ablation}
+\begin{tabular}{l|c|c|ccc|cc}
+\toprule
+\textbf{Method} & \textbf{Throughput} & \textbf{Speedup} & \textbf{TTFT} & \textbf{TPOT} & \textbf{Accept\%} & \textbf{PathLen} & \textbf{Rounds} \\
+ & (tokens/s) & vs Baseline & (ms) & (ms) & & & \\
+\midrule
+\multicolumn{8}{l}{\textit{Baseline}} \\
+Autoregressive (AR) & 132.7±0.9 & 1.00× & 19.1 & 7.50 & - & - & 500 \\
+\midrule
+\multicolumn{8}{l}{\textit{Control Group: Fixed Tree (D=depth, B=2)}} \\
+Fixed Tree D=4 & 145.1±37.9 & 1.09× & 14.4 & 7.47 & 77.7\% & 4.66 & 108 \\
+Fixed Tree D=5 & 177.0±21.4 & 1.33× & 12.0 & 5.70 & 73.8\% & 5.17 & 98 \\
+Fixed Tree D=6 & 183.3±25.0 & 1.38× & 12.6 & 5.52 & 69.5\% & 5.56 & 91 \\
+Fixed Tree D=7 & 182.7±30.8 & 1.38× & 12.0 & 5.59 & 64.5\% & 5.81 & 89 \\
+\midrule
+\multicolumn{8}{l}{\textit{Experiment Group: Adaptive Tree (base\_depth=4)}} \\
++Phase 1: Adaptive Branch & 167.4±20.7 & 1.26× & 12.2 & 6.03 & 77.1\% & 4.62 & 109 \\
++Phase 2: Dynamic Depth & 185.3±34.8 & 1.40× & 12.1 & 5.56 & 87.0\% & 5.22 & 102 \\
++Phase 3: History Adjust & \textbf{189.4±34.4} & \textbf{1.43×} & 22.7 & 5.42 & \textbf{92.3\%} & 5.54 & 95 \\
+\midrule
+\multicolumn{8}{l}{\textit{Experiment Group: Adaptive Tree (base\_depth=5)}} \\
++Phase 1: Adaptive Branch & 174.0±26.0 & 1.31× & 12.2 & 5.84 & 72.9\% & 5.10 & 100 \\
++Phase 2: Dynamic Depth & 183.5±34.2 & 1.38× & 12.0 & 5.59 & 75.9\% & 5.31 & 99 \\
++Phase 3: History Adjust & 187.2±35.1 & 1.41× & 12.1 & 5.50 & 80.3\% & 5.62 & 94 \\
+\midrule
+\multicolumn{8}{l}{\textit{Experiment Group: Adaptive Tree (base\_depth=6)}} \\
++Phase 1: Adaptive Branch & 176.9±28.3 & 1.33× & 12.0 & 5.76 & 68.9\% & 5.51 & 92 \\
++Phase 2: Dynamic Depth & 191.3±36.8 & 1.44× & 12.1 & 5.39 & 72.2\% & 5.78 & 92 \\
++Phase 3: History Adjust & \textbf{192.3±36.1} & \textbf{1.45×} & 12.2 & \textbf{5.35} & 74.2\% & \textbf{5.94} & 89 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+% 简化版本 - 只展示主要对比
+\begin{table}[t]
+\centering
+\caption{Summary: Adaptive vs Fixed Tree}
+\label{tab:ablation_summary}
+\begin{tabular}{l|cc|c}
+\toprule
+\textbf{Depth} & \textbf{Fixed Tree} & \textbf{Adaptive (Phase 3)} & \textbf{Improvement} \\
+\midrule
+D=4 & 145.1 t/s & 189.4 t/s & +30.5\% \\
+D=5 & 177.0 t/s & 187.2 t/s & +5.8\% \\
+D=6 & 183.3 t/s & 192.3 t/s & +4.9\% \\
+\midrule
+Best & 183.3 t/s (D=6) & \textbf{192.3 t/s} (D=6) & \textbf{+4.9\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+

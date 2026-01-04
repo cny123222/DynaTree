@@ -116,6 +116,8 @@ class TreeSpeculativeGenerator(SpeculativeGenerator):
         """Reset the generator state for a new generation session."""
         super().reset()
         self._token_tree = None
+        # 重要：清除验证 cache 以释放 GPU 内存
+        self._verify_cache = None
         self.tree_stats = {
             "total_tree_nodes": 0,
             "total_paths_explored": 0,
@@ -582,9 +584,9 @@ class TreeSpeculativeGenerator(SpeculativeGenerator):
                 self.tree_stats["max_path_length_achieved"] = num_accepted
             
             # 更新深度接受率统计
-            # 每轮最大可能接受 tree_depth + 1 个 tokens (包括 bonus token)
+            # 每轮最大可能接受 tree_depth + 2 个 tokens (root在depth=0 + tree_depth层 + bonus token)
             self.tree_stats["total_accepted_depth"] += num_accepted
-            self.tree_stats["total_max_depth"] += self.tree_depth + 1
+            self.tree_stats["total_max_depth"] += self.tree_depth + 2
             
             if verbose:
                 print(f"Round {self.stats['total_rounds']}: accepted {num_accepted} tokens, total: {generated}")
