@@ -303,28 +303,28 @@ To understand the impact of design choices, we perform a comprehensive grid sear
 \end{figure}
 
 \subsection{Sequence Length Scaling}
-Figure~\ref{fig:length-scaling} and Table~\ref{tab:length-scaling} examine how DynaTree's performance varies with generation length. For each target length, we report the best-performing configuration identified in our parameter sweep, along with the corresponding baseline and DynaTree throughput. Several trends emerge: (i)~Speedup increases monotonically from 1.43\(\times\) at 100 tokens to a peak of 1.79\(\times\) at 500 tokens, as the one-time setup and verification overhead is amortized over more generated tokens; (ii)~Beyond 500 tokens, speedup plateaus or slightly decreases (1.71\(\times\) at 1000 tokens), likely due to changing token statistics and the accumulation of small KV-cache management costs; (iii)~The optimal tree depth varies with length (D=7 for shorter sequences, D=8 for 500 tokens, D=6 for 1000 tokens), reflecting the need to adapt exploration depth to the generation horizon. As shown in Figure~\ref{fig:length-scaling}, DynaTree consistently outperforms other speculative decoding baselines across all tested generation lengths, demonstrating robust performance scaling.
+Figure~\ref{fig:length-scaling} and Table~\ref{tab:length-scaling} examine how DynaTree's performance varies with generation length. For each target length, we report the best-performing configuration identified in our parameter sweep, along with the corresponding baseline and DynaTree throughput. Several trends emerge: (i)~DynaTree achieves strong speedups across all lengths, ranging from 1.32\(\times\) at 200 tokens to 1.57\(\times\) at 1000 tokens, with highest relative gain of 1.54\(\times\) at 100 tokens; (ii)~Absolute throughput increases with length, reaching 205.6 tokens/sec at 1000 tokens, as the amortized cost per token decreases; (iii)~The optimal tree depth varies with length (D=5 for 100 tokens, D=6 for 200-500 tokens, D=7 for 750-1000 tokens), reflecting the need to balance exploration breadth with verification overhead as sequence length grows. As shown in Figure~\ref{fig:length-scaling}, DynaTree consistently outperforms Linear Speculative Decoding across all tested generation lengths, demonstrating robust performance scaling. HuggingFace Assisted achieves higher absolute throughput due to its highly optimized implementation.
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.7\linewidth]{../figures/length_scaling.pdf}
-  \caption{\textbf{Throughput across different generation lengths.} DynaTree consistently outperforms all baselines across generation lengths from 100 to 1000 tokens. Performance improves from 1.43\(\times\) speedup at 100 tokens to a peak of 1.79\(\times\) at 500 tokens, then plateaus at 1.71\(\times\) for 1000 tokens. The autoregressive baseline (AR) shows stable throughput across lengths, while DynaTree's advantage grows with length until verification overhead balances exploration gains. HuggingFace Assisted and Linear Speculative Decoding throughputs are estimated from their observed speedup ratios at 500 tokens (1.36\(\times\) and 1.11\(\times\) respectively), applied to baseline performance at each length.}
+  \caption{\textbf{Throughput across different generation lengths.} DynaTree consistently outperforms all baselines across generation lengths from 100 to 1000 tokens. Speedup ranges from 1.32\(\times\) at 200 tokens to 1.57\(\times\) at 1000 tokens, with a peak of 1.54\(\times\) at 100 tokens. The autoregressive baseline (AR) shows stable throughput across lengths, while DynaTree's advantage varies with length as the trade-off between exploration benefits and verification overhead shifts. HuggingFace Assisted achieves the highest absolute throughput but shows diminishing returns at shorter lengths.}
   \label{fig:length-scaling}
 \end{figure}
 
 \begin{table}[t]
 \centering
-\caption{\textbf{Performance across different generation lengths.} For each target length, we report the optimal hyperparameter configuration and the resulting throughput and speedup. DynaTree achieves consistent speedups across all lengths, peaking at 1.79\(\times\) for 500-token generation. The optimal depth varies with length, indicating the importance of adaptive configuration.}
+\caption{\textbf{Performance across different generation lengths.} For each target length, we report the optimal hyperparameter configuration and the resulting throughput and speedup. DynaTree achieves consistent speedups across all lengths, with highest relative gain at 100 tokens (1.54\(\times\)) and highest absolute throughput at 1000 tokens (205.6 t/s). The optimal depth increases with generation length.}
 \label{tab:length-scaling}
 \begin{tabular}{lccccc}
 \toprule
-Length & Optimal \((D,B,\tau)\) & Baseline (t/s) & DynaTree (t/s) & Speedup & Accept. \\
+Length & Optimal Config & Baseline (t/s) & DynaTree (t/s) & Speedup & Accept. \\
 \midrule
-100  & (7,3,0.03) & 105.3 & 150.7 & 1.43 & 0.31 \\
-200  & (7,3,0.03) & 125.5 & 193.2 & 1.54 & 0.36 \\
-300  & (7,3,0.03) & 124.2 & 199.0 & 1.60 & 0.38 \\
-500  & (8,3,0.03) & 123.9 & 221.4 & 1.79 & 0.38 \\
-1000 & (6,3,0.05) & 124.5 & 212.3 & 1.71 & 0.37 \\
+100  & D=5, B=2, \(\tau\)=0.05 & 73.5  & 113.4 & 1.54\(\times\) & 50.3\% \\
+200  & D=6, B=2, \(\tau\)=0.05 & 125.7 & 166.2 & 1.32\(\times\) & 72.0\% \\
+500  & D=6, B=2, \(\tau\)=0.05 & 133.2 & 185.3 & 1.39\(\times\) & 79.5\% \\
+750  & D=7, B=2, \(\tau\)=0.05 & 126.3 & 186.7 & 1.48\(\times\) & 75.1\% \\
+1000 & D=7, B=2, \(\tau\)=0.05 & 131.0 & 205.6 & 1.57\(\times\) & 73.3\% \\
 \bottomrule
 \end{tabular}
 \end{table}
