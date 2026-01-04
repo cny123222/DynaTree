@@ -141,7 +141,7 @@ DynaTree generalizes linear speculative decoding from a single draft chain to a 
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\linewidth]{../figures/dynatree-v7.png}
+  \includegraphics[width=\linewidth]{../figures/dynatree-v8.png}
   \caption{\textbf{One iteration of DynaTree decoding.} The process consists of six main stages: (1)~\emph{Tree Generation:} The draft model expands a candidate tree with top-$B$ branching up to depth $D$. (2)~\emph{Adaptive Pruning:} Branches with cumulative probability below threshold $\tau$ or exceeding node budget $N_{\max}$ are pruned. (3)~\emph{Flattening \& Masking:} The pruned tree is serialized in breadth-first order, and a causal attention mask is constructed to ensure each node attends only to its ancestors. (4)~\emph{Parallel Verification:} The target model verifies all candidates in a single forward pass. (5)~\emph{Path Selection:} The longest path where drafted tokens match the target model's greedy predictions is identified. (6)~\emph{Cache Update:} The committed tokens are used to update the context and key-value cache for the next iteration. This design enables efficient multi-path exploration while maintaining correctness guarantees for greedy decoding.}
   \label{fig:arch}
 \end{figure}
@@ -297,6 +297,13 @@ To understand the impact of design choices, we perform a comprehensive grid sear
   \includegraphics[width=\linewidth]{../figures/tree_config_comparison.pdf}
   \caption{\textbf{Impact of tree configuration on throughput (500-token generation).} (a)~Branch factor impact for different depths (fixed \(\tau=0.03\)): B=3 achieves optimal throughput across all depths, with deeper trees benefiting more from branching. (b)~Depth impact for different branch factors (fixed \(\tau=0.03\)): throughput increases with depth up to D=8, after which verification overhead dominates. (c)~Pruning threshold impact for different depths (fixed B=3): \(\tau=0.03\) balances exploration and cost across all depths. The optimal configuration (D=8, B=3, \(\tau=0.03\), highlighted in terra cotta) achieves 221.4~tokens/s.}
   \label{fig:tree-config}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.65\linewidth]{../figures/tree_config_heatmap.pdf}
+  \caption{\textbf{Tree configuration heatmap (500-token generation, \(\tau\)=0.05).} Heatmap visualization of throughput across depth and branch factor combinations. Each cell shows the achieved throughput (tokens/s). The optimal configuration (D=7, B=2, highlighted with dashed border) achieves 172.3~tokens/s. Darker colors indicate higher throughput. The heatmap clearly shows that (i)~deeper trees (D=6,7) consistently outperform shallow trees, and (ii)~branch factor B=2 provides better throughput than B=3 across all depths, suggesting that wider exploration incurs verification overhead that outweighs the benefit of additional paths at this threshold setting.}
+  \label{fig:heatmap}
 \end{figure}
 
 \subsection{Sequence Length Scaling}
