@@ -792,8 +792,15 @@ class PaperBenchmark:
         print("# EXPERIMENT 3: PARAMETER SENSITIVITY")
         print("#"*80)
         
+        # Baseline methods for comparison
         if self.baseline_throughput is None:
             self.benchmark_baseline(max_new_tokens, experiment="sensitivity")
+        
+        # Linear Speculative Decoding as baseline
+        self.benchmark_linear_spec(max_new_tokens, K=5, experiment="sensitivity")
+        
+        # Fixed Tree as baseline
+        self.benchmark_fixed_tree(max_new_tokens, tree_depth=5, branch_factor=2, experiment="sensitivity")
         
         # Sensitivity to confidence thresholds
         threshold_configs = [
@@ -837,11 +844,14 @@ class PaperBenchmark:
         print("# EXPERIMENT 4: SCALABILITY STUDY")
         print("#"*80)
         
-        token_lengths = [100, 200, 300, 500, 750, 1000]
+        token_lengths = [100, 200, 300, 500, 750, 1000, 1500]
         
         for length in token_lengths:
             # Baseline
             self.benchmark_baseline(length, experiment=f"scalability_{length}")
+            
+            # Linear Speculative Decoding
+            self.benchmark_linear_spec(length, K=5, experiment=f"scalability_{length}")
             
             # Fixed Tree
             self.benchmark_fixed_tree(length, tree_depth=5, branch_factor=2, experiment=f"scalability_{length}")
