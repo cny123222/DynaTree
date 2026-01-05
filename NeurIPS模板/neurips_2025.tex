@@ -330,22 +330,20 @@ Fixed Tree (\(D=5,B=2\)) & 14.9\(\pm\)3.9 & 5.34\(\pm\)0.51 & 10.4\(\pm\)0.4 & 5
 
 \subsection{Ablation Study}
 \label{sec:ablation}
-We perform a progressive ablation study on WikiText-2 (\(T=500\)) to isolate the contribution of each adaptive component. We start from a fixed-tree baseline and incrementally enable Phase~1 (Dynamic Breadth), Phase~2 (Dynamic Depth), and Phase~3 (History Adaptation). Table~\ref{tab:ablation} reports results under a matched base depth \(D_0=5\), showing that dynamic depth provides the largest marginal gain, while history adaptation further improves stability and acceptance.
+We report an ablation-style progressive comparison on WikiText-2 under the same \(T=1500\) setting as the main benchmark, isolating how each adaptive component contributes on top of a fixed-tree backbone. In this regime, enabling Dynamic Breadth alone can slightly reduce throughput due to additional control overhead, while Dynamic Depth provides the dominant gain. For clarity, Table~\ref{tab:ablation} merges Phase~1+2 into a single \emph{Dynamic Structure} variant (Dynamic Breadth + Dynamic Depth), and reports the additional benefit of History Adaptation (Phase~3).
 
 \begin{table}[t]
 \centering
-\caption{\textbf{Progressive ablation on WikiText-2 (\(T=500\)).} We compare a fixed tree (\(D_0=5,B=2\)) with Phase~1/2/3 variants that incrementally add Dynamic Breadth, Dynamic Depth, and History Adaptation. Speedup is computed relative to the autoregressive baseline.}
+\caption{\textbf{Ablation-style progressive comparison on WikiText-2 (\(T=1500\)).} We compare a fixed tree (\(D_0=5,B=2\)) with variants that add Dynamic Structure (Dynamic Breadth + Dynamic Depth) and History Adaptation. Speedup is computed relative to the autoregressive baseline.}
 \label{tab:ablation}
 \small
-\begin{tabular}{lcccc}
+\begin{tabular}{lccc}
 \toprule
-Variant & Throughput (t/s) & Speedup & \(\Delta\) vs Fixed & Accept. (\%) \\
+Variant & Throughput (t/s) & Speedup & \(\Delta\) vs Fixed \\
 \midrule
-AR & 132.7\(\pm\)0.9 & 1.00\(\times\) & -- & -- \\
-Fixed Tree (\(D_0=5,B=2\)) & 177.0\(\pm\)21.4 & 1.33\(\times\) & 0.0\% & 73.8 \\
-Phase~1: Dynamic Breadth & 174.0\(\pm\)26.0 & 1.31\(\times\) & $-$1.7\% & 72.9 \\
-Phase~2: Dynamic Depth & 183.5\(\pm\)34.2 & 1.38\(\times\) & +3.7\% & 75.9 \\
-\textbf{Phase~3: History Adaptation} & \textbf{187.2\(\pm\)35.1} & \textbf{1.41\(\times\)} & \textbf{+5.8\%} & \textbf{80.3} \\
+Fixed Tree (\(D_0=5,B=2\)) & 188.6\(\pm\)16.7 & 1.39\(\times\) & 0.0\% \\
+Dynamic Structure (Phase~1+2) & 213.7\(\pm\)26.0 & 1.58\(\times\) & +13.3\% \\
+\textbf{DynaTree (+History Adaptation)} & \textbf{218.1\(\pm\)21.6} & \textbf{1.61\(\times\)} & \textbf{+15.6\%} \\
 \bottomrule
 \end{tabular}
 \end{table}
