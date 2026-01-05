@@ -276,7 +276,7 @@ We compare the proposed confidence-aware adaptive decoding against the following
 
 \subsection{Main Results}
 \label{main-results}
-Table~\ref{tab:main-results} reports end-to-end throughput on WikiText-2 and PG-19 for \(T=1500\) token generation. Across both datasets, DynaTree consistently outperforms autoregressive decoding and linear speculative decoding. On PG-19, DynaTree also improves over the fixed-tree baseline (192.1~t/s vs.\ 183.7~t/s), indicating that confidence-aware adaptation can provide additional benefit in long-form text.
+Table~\ref{tab:main-results} reports end-to-end throughput on WikiText-2 and PG-19 for \(T=1500\) token generation. Across both datasets, DynaTree yields the highest throughput and improves over both autoregressive decoding and linear speculative decoding. Compared with a fixed tree, DynaTree provides an additional gain on both datasets (e.g., 218.1~t/s vs.\ 188.6~t/s on WikiText-2), indicating that adapting the draft structure to local model uncertainty improves the draft--verify trade-off beyond a static configuration.
 
 \begin{table}[t]
 \centering
@@ -297,7 +297,7 @@ Fixed Tree (\(D=5,B=2\)) & 188.6\(\pm\)16.7 & 1.39\(\times\) & 183.7\(\pm\)24.8 
 \end{tabular}
 \end{table}
 
-Figure~\ref{fig:main-results} visualizes the throughput and speedup comparison. Although linear speculative decoding achieves high per-token acceptance, it discards the remainder of the drafted chain after an early mismatch. In contrast, tree-based methods can commit longer greedy-consistent prefixes per iteration by exploring multiple candidates in parallel. DynaTree's confidence-aware adaptation further improves this trade-off, yielding the best end-to-end throughput.
+Figure~\ref{fig:main-results} visualizes the throughput and speedup comparison. Linear speculative decoding can achieve high acceptance but is fragile to early mismatches: once a divergence occurs, the remaining drafted tokens in the chain cannot be reused. Tree-based drafting mitigates this failure mode by exploring multiple continuations in parallel and committing the longest greedy-consistent prefix. DynaTree further concentrates the verification budget on high-confidence regions while limiting wasted expansion in uncertain regions, improving throughput across both datasets.
 
 \paragraph{Latency breakdown analysis.}
 Table~\ref{tab:latency-metrics} reports TTFT and TPOT on both datasets for \(T=1500\). Across datasets, speculative decoding reduces TTFT relative to autoregressive decoding, and DynaTree achieves the lowest TPOT by committing longer prefixes per verification step.
