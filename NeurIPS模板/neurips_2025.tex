@@ -269,13 +269,14 @@ We report \textbf{throughput} (tokens per second) as the primary metric, compute
 We compare the proposed confidence-aware adaptive decoding against the following baselines and variants under identical greedy decoding settings:
 \begin{itemize}
   \item \textbf{Autoregressive (AR):} Standard greedy decoding with the target model, serving as the performance baseline.
+  \item \textbf{Linear speculative decoding:} A linear-chain speculative decoder that drafts \(K\) tokens with the draft model and verifies them with the target model in parallel, committing the longest greedy-consistent prefix~\citep{leviathan2023fast}.
   \item \textbf{Fixed Tree:} A static tree speculative decoder with fixed depth \(D\), fixed branching factor \(B\), and node budget \(N_{\max}\), representing a non-adaptive tree baseline.
-  \item \textbf{DynaTree (Phase 1/2/3):} Progressive variants that add confidence-aware adaptive branching (Phase~1), dynamic depth control (Phase~2), and historical adjustment (Phase~3) on top of the fixed-tree backbone.
+  \item \textbf{DynaTree (Phase 3):} Our final method, which adds confidence-aware adaptive branching, dynamic depth control, and historical adjustment on top of the fixed-tree backbone.
 \end{itemize}
 
 \subsection{Main Results}
 \label{main-results}
-Table~\ref{tab:main-results} reports the end-to-end performance on WikiText-2 for \(T=1000\) token generation. Relative to autoregressive decoding, a fixed tree already improves throughput to 181.3~t/s (1.38\(\times\)). Incorporating confidence-aware adaptation yields further gains: Phase~2 achieves 206.0~t/s (1.57\(\times\)), and Phase~3 reaches \textbf{210.8~t/s} (\textbf{1.61\(\times\)}), a 16.3\% throughput improvement over the fixed-tree baseline. These results show that adapting tree breadth and depth to model confidence can increase per-iteration progress while maintaining greedy correctness.
+Table~\ref{tab:main-results} reports the end-to-end performance on WikiText-2 for \(T=1000\) token generation. Compared with autoregressive decoding, linear speculative decoding improves throughput to 156.6~t/s (1.15\(\times\)) by verifying short draft chains. A fixed tree further increases throughput to 191.9~t/s (1.41\(\times\)) by exploring multiple candidates per verification step. Our final adaptive method (Phase~3) achieves the best throughput, reaching \textbf{198.7~t/s} (\textbf{1.46\(\times\)}), improving over linear speculative decoding and the static-tree baseline under identical greedy decoding.
 
 \begin{table}[t]
 \centering
@@ -286,19 +287,18 @@ Table~\ref{tab:main-results} reports the end-to-end performance on WikiText-2 fo
 \toprule
 Method & Throughput (t/s) & Speedup & Accept. (\%) & Tokens/Iter & Avg.\ Path Len \\
 \midrule
-AR & 131.1\(\pm\)0.4 & 1.00\(\times\) & -- & 1.00 & -- \\
-Fixed Tree (\(D=5,B=2\)) & 181.3\(\pm\)12.3 & 1.38\(\times\) & 80.8 & 5.65 & 5.65 \\
-Phase~1: Adaptive Branch & 176.7\(\pm\)36.2 & 1.35\(\times\) & 77.9 & 5.35 & 5.45 \\
-Phase~2: + Dynamic Depth & 206.0\(\pm\)29.8 & 1.57\(\times\) & 89.6 & 6.06 & 6.27 \\
-\textbf{Phase~3: + History Adjust} & \textbf{210.8\(\pm\)26.5} & \textbf{1.61\(\times\)} & \textbf{94.7} & \textbf{6.49} & \textbf{6.63} \\
+AR & 135.6\(\pm\)0.8 & 1.00\(\times\) & -- & 1.00 & -- \\
+Linear Spec (\(K=5\)) & 156.6\(\pm\)20.2 & 1.15\(\times\) & 93.5 & 4.61 & 4.67 \\
+Fixed Tree (\(D=5,B=2\)) & 191.9\(\pm\)14.0 & 1.41\(\times\) & 80.8 & 5.65 & 5.65 \\
+\textbf{DynaTree (Phase~3)} & \textbf{198.7\(\pm\)42.2} & \textbf{1.46\(\times\)} & \textbf{94.7} & \textbf{6.49} & \textbf{6.63} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Figure~\ref{fig:main-results} visualizes the throughput and speedup trends across variants. Phase~2 and Phase~3 reduce the number of verification rounds by committing longer greedy-consistent prefixes per iteration, which translates into a substantially lower per-token latency (TPOT) while preserving deterministic outputs.
+Figure~\ref{fig:main-results} visualizes the throughput and speedup comparison. Although linear speculative decoding achieves high per-token acceptance, it discards the remainder of the drafted chain after an early mismatch. In contrast, tree-based methods can commit longer greedy-consistent prefixes per iteration by exploring multiple candidates in parallel. DynaTree's confidence-aware adaptation further improves this trade-off, yielding the best end-to-end throughput.
 
 \paragraph{Latency breakdown analysis.}
-To understand fine-grained latency characteristics, Table~\ref{tab:latency-metrics} reports Time-To-First-Token (TTFT) and Time-Per-Output-Token (TPOT) on WikiText-2 for \(T=1000\). While all speculative variants substantially reduce TTFT relative to autoregressive decoding, the largest gains appear in TPOT: Phase~3 achieves the lowest TPOT (4.81~ms), consistent with its higher tokens-per-iteration progress.
+To understand fine-grained latency characteristics, Table~\ref{tab:latency-metrics} reports Time-To-First-Token (TTFT) and Time-Per-Output-Token (TPOT) on WikiText-2 for \(T=1000\). Speculative decoding substantially reduces TTFT relative to autoregressive decoding. Moreover, DynaTree reduces TPOT to 5.30~ms while maintaining greedy consistency, consistent with its higher tokens-per-iteration progress.
 
 \begin{table}[t]
 \centering
@@ -309,11 +309,10 @@ To understand fine-grained latency characteristics, Table~\ref{tab:latency-metri
 \toprule
 Method & TTFT (ms) & TPOT (ms) \\
 \midrule
-AR & 18.9\(\pm\)6.1 & 7.61\(\pm\)0.02 \\
-Fixed Tree (\(D=5,B=2\)) & 12.7\(\pm\)2.7 & 5.53\(\pm\)0.38 \\
-Phase~1: Adaptive Branch & 13.9\(\pm\)5.4 & 5.98\(\pm\)1.71 \\
-Phase~2: + Dynamic Depth & 12.5\(\pm\)2.7 & 4.95\(\pm\)0.77 \\
-\textbf{Phase~3: + History Adjust} & 12.6\(\pm\)2.7 & \textbf{4.81\(\pm\)0.63} \\
+AR & 18.8\(\pm\)6.0 & 7.35\(\pm\)0.04 \\
+Linear Spec (\(K=5\)) & 14.7\(\pm\)5.7 & 6.48\(\pm\)0.88 \\
+Fixed Tree (\(D=5,B=2\)) & 12.6\(\pm\)2.7 & 5.23\(\pm\)0.37 \\
+\textbf{DynaTree (Phase~3)} & 13.8\(\pm\)3.6 & \textbf{5.30\(\pm\)1.39} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -321,9 +320,31 @@ Phase~2: + Dynamic Depth & 12.5\(\pm\)2.7 & 4.95\(\pm\)0.77 \\
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.85\linewidth]{../figures/main_results_bars.pdf}
-  \caption{\textbf{Throughput and speedup on WikiText-2 (\(T=1000\)).} Left: absolute throughput (tokens/s). Right: speedup relative to autoregressive decoding. Phase~3 achieves the highest throughput (210.8~t/s, 1.61\(\times\)), improving over the fixed-tree baseline (181.3~t/s, 1.38\(\times\)).}
+  \caption{\textbf{Throughput and speedup on WikiText-2 (\(T=1000\)).} Left: absolute throughput (tokens/s). Right: speedup relative to autoregressive decoding. DynaTree (Phase~3) achieves the highest throughput (198.7~t/s, 1.46\(\times\)), improving over linear speculative decoding (156.6~t/s, 1.15\(\times\)) and the fixed-tree baseline (191.9~t/s, 1.41\(\times\)).}
   \label{fig:main-results}
 \end{figure}
+
+\subsection{Ablation Study}
+\label{sec:ablation}
+We perform a progressive ablation study on WikiText-2 (\(T=500\)) to isolate the contribution of each adaptive component. We start from a fixed-tree baseline and incrementally enable (i)~confidence-aware adaptive branching (Phase~1), (ii)~dynamic depth control (Phase~2), and (iii)~historical adjustment (Phase~3). Table~\ref{tab:ablation} reports results under a matched base depth \(D_0=5\), showing that dynamic depth control provides the largest marginal gain, while historical adjustment further improves stability and acceptance.
+
+\begin{table}[t]
+\centering
+\caption{\textbf{Progressive ablation on WikiText-2 (\(T=500\)).} We compare a fixed tree (\(D_0=5,B=2\)) with Phase~1/2/3 variants that incrementally add adaptive branching, dynamic depth control, and historical adjustment. Speedup is computed relative to the autoregressive baseline.}
+\label{tab:ablation}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Variant & Throughput (t/s) & Speedup & \(\Delta\) vs Fixed & Accept. (\%) \\
+\midrule
+AR & 132.7\(\pm\)0.9 & 1.00\(\times\) & -- & -- \\
+Fixed Tree (\(D_0=5,B=2\)) & 177.0\(\pm\)21.4 & 1.33\(\times\) & 0.0\% & 73.8 \\
+Phase~1: + Adaptive Branch & 174.0\(\pm\)26.0 & 1.31\(\times\) & $-$1.7\% & 72.9 \\
+Phase~2: + Dynamic Depth & 183.5\(\pm\)34.2 & 1.38\(\times\) & +3.7\% & 75.9 \\
+\textbf{Phase~3: + History Adjust} & \textbf{187.2\(\pm\)35.1} & \textbf{1.41\(\times\)} & \textbf{+5.8\%} & \textbf{80.3} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Hyperparameter Sensitivity}
 To understand the impact of design choices, we perform a comprehensive grid search over tree depth \(D \in \{3,4,5,6,7,8\}\), branching factor \(B \in \{2,3,4\}\), and pruning threshold \(\tau \in \{0.01,0.02,0.03,0.05,0.1\}\) across generation lengths ranging from 100 to 1000 tokens, totaling 450 configurations. Figure~\ref{fig:tree-config} illustrates the throughput trends across these parameters for 500-token generation. Key findings include: (i)~\emph{Depth} exhibits diminishing returns beyond D=8, as verification overhead grows faster than the expected path length (Figure~\ref{fig:tree-config}b); (ii)~\emph{Branching factor} B=3 provides the best throughput-exploration trade-off, with B=4 introducing too much verification cost (Figure~\ref{fig:tree-config}a); (iii)~\emph{Pruning threshold} \(\tau=0.03\) is optimal, balancing aggressive pruning (which may discard valid paths) and loose thresholds (which waste computation on unlikely branches) (Figure~\ref{fig:tree-config}c). These results confirm that adaptive probability-threshold pruning is essential to maintain an effective tree size within the verification budget. Additional detailed visualizations across all generation lengths are provided in Appendix~\ref{app:sweep} (Figure~\ref{fig:param-sweep}).
