@@ -376,7 +376,7 @@ Unless stated otherwise, the adaptive configuration uses base depth \(D_0=5\), m
 Some auxiliary result files include a placeholder \texttt{speedup} field; throughout this appendix we report speedup as the ratio between the method throughput and the corresponding autoregressive throughput under the same setting.
 
 \subsection{Sequence Length Scaling}
-We evaluate how throughput varies with generation length \(T\) on WikiText-2, comparing autoregressive decoding, a fixed tree configuration, and DynaTree. Table~\ref{tab:appendix-scalability} reports throughput and speedup for each \(T\).
+We evaluate how throughput varies with generation length \(T\) on WikiText-2, comparing autoregressive decoding, linear speculative decoding, a fixed tree configuration, and DynaTree. Table~\ref{tab:appendix-scalability} reports throughput for each \(T\), along with the DynaTree speedup relative to autoregressive decoding.
 
 \begin{table}[t]
 \centering
@@ -385,14 +385,15 @@ We evaluate how throughput varies with generation length \(T\) on WikiText-2, co
 \small
 \begin{tabular}{ccccccc}
 \toprule
-\(T\) & AR (t/s) & Fixed Tree (t/s) & Speedup & DynaTree (t/s) & Speedup & Accept. \\
+\(T\) & AR (t/s) & Linear (t/s) & Fixed Tree (t/s) & DynaTree (t/s) & Speedup & Accept. \\
 \midrule
-100  & 81.6\(\pm\)17.2 & 109.6\(\pm\)27.4 & 1.34\(\times\) & 110.0\(\pm\)36.8 & 1.35\(\times\) & 39.2\% \\
-200  & 121.3\(\pm\)21.7 & 140.9\(\pm\)27.0 & 1.16\(\times\) & 135.6\(\pm\)35.9 & 1.12\(\times\) & 49.0\% \\
-300  & 132.1\(\pm\)2.1  & 157.6\(\pm\)26.0 & 1.19\(\times\) & 159.7\(\pm\)32.4 & 1.21\(\times\) & 62.6\% \\
-500  & 133.4\(\pm\)0.9  & 165.3\(\pm\)32.1 & 1.24\(\times\) & 178.1\(\pm\)42.1 & 1.33\(\times\) & 77.3\% \\
-750  & 127.2\(\pm\)14.4 & 183.7\(\pm\)12.9 & 1.44\(\times\) & 190.7\(\pm\)36.6 & 1.50\(\times\) & 86.1\% \\
-1000 & 135.7\(\pm\)0.7  & 192.2\(\pm\)13.6 & 1.42\(\times\) & 210.0\(\pm\)27.0 & 1.55\(\times\) & 92.0\% \\
+100  & 128.8\(\pm\)1.5 & 94.0\(\pm\)27.6 & 112.5\(\pm\)29.6 & 114.3\(\pm\)34.2 & 0.89\(\times\) & 40.3\% \\
+200  & 131.5\(\pm\)1.1 & 119.4\(\pm\)26.4 & 140.1\(\pm\)28.0 & 143.0\(\pm\)34.6 & 1.09\(\times\) & 53.3\% \\
+300  & 131.8\(\pm\)0.6 & 136.8\(\pm\)24.7 & 158.2\(\pm\)26.7 & 163.8\(\pm\)31.4 & 1.24\(\times\) & 65.6\% \\
+500  & 127.2\(\pm\)10.0 & 152.3\(\pm\)23.1 & 177.9\(\pm\)21.9 & 188.2\(\pm\)32.4 & 1.48\(\times\) & 79.8\% \\
+750  & 132.9\(\pm\)0.9 & 161.3\(\pm\)22.9 & 185.6\(\pm\)13.9 & 202.8\(\pm\)29.8 & 1.53\(\times\) & 88.7\% \\
+1000 & 132.9\(\pm\)0.9 & 167.7\(\pm\)21.4 & 190.9\(\pm\)13.6 & 211.9\(\pm\)26.9 & 1.59\(\times\) & 94.7\% \\
+1500 & 132.2\(\pm\)0.6 & 172.6\(\pm\)17.9 & 172.3\(\pm\)35.5 & 178.0\(\pm\)44.3 & 1.35\(\times\) & 102.2\% \\
 \bottomrule
 \end{tabular}
 \end{table}
