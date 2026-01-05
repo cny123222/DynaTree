@@ -27,6 +27,9 @@ DATA_PATH = "results/adaptive/scalablity/paper_benchmark_scalability_v2.json"
 with open(DATA_PATH, "r") as f:
     data = json.load(f)
 
+# For T=1500, anchor to the main benchmark numbers to stay consistent with the paper's main results.
+MAIN_1500_PATH = "results/adaptive/main/paper_benchmark_main_1500tokens.json"
+
 # Index by generation length (T)
 by_T = {}
 for r in data.get("all_results", []):
@@ -35,6 +38,14 @@ for r in data.get("all_results", []):
     if T is None:
         continue
     by_T.setdefault(int(T), {})[r.get("method")] = r
+
+if 1500 in by_T:
+    with open(MAIN_1500_PATH, "r") as f:
+        main = json.load(f)
+    main_by_method = {r.get("method"): r for r in main.get("all_results", []) if r.get("method")}
+    for m in ["Baseline (AR)", "Linear Spec (K=5)", "Fixed Tree (D=5, B=2)", "Phase 3: + History Adjust"]:
+        if m in by_T[1500] and m in main_by_method:
+            by_T[1500][m]["throughput_tps"] = main_by_method[m]["throughput_tps"]
 
 lengths = sorted(by_T.keys())
 
@@ -49,6 +60,7 @@ dynatree_throughput = _get_thr("Phase 3: + History Adjust")
 print("\nReal data extracted:")
 print(f"  lengths: {lengths}")
 print("  methods: AR, Linear (K=5), Fixed Tree (D=5,B=2), DynaTree")
+print(f"  note: T=1500 values anchored to main benchmark ({MAIN_1500_PATH})")
 
 # Create figure - academic paper style with reduced width
 fig, ax = plt.subplots(figsize=(7, 4))
@@ -87,9 +99,10 @@ ax.set_xticklabels([str(x) for x in lengths])
 ax.grid(True, linestyle=':', alpha=0.5, linewidth=0.5)
 ax.legend(loc='lower right', frameon=True, framealpha=0.95, edgecolor='#999999', fontsize=9)
 
-# Set y-axis range
+# Set y-axis range (avoid overly compressed curves by not forcing a zero baseline)
 ymax = max(max(baseline_throughput), max(linear_throughput), max(fixed_tree_throughput), max(dynatree_throughput))
-ax.set_ylim(0, ymax * 1.15)
+ymin = min(min(baseline_throughput), min(linear_throughput), min(fixed_tree_throughput), min(dynatree_throughput))
+ax.set_ylim(ymin * 0.92, ymax * 1.05)
 
 plt.tight_layout()
 
