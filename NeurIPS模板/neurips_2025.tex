@@ -330,7 +330,7 @@ Fixed Tree (\(D=5,B=2\)) & 14.9\(\pm\)3.9 & 5.34\(\pm\)0.51 & 10.4\(\pm\)0.4 & 5
 
 \subsection{Ablation Study}
 \label{sec:ablation}
-We report an ablation-style progressive comparison on WikiText-2 under the same \(T=1500\) setting as the main benchmark, isolating how each adaptive component contributes on top of a fixed-tree backbone. In this regime, enabling Dynamic Breadth alone can slightly reduce throughput due to additional control overhead, while Dynamic Depth provides the dominant gain. For clarity, Table~\ref{tab:ablation} reports the combined effect of \emph{Dynamic Breadth \& Depth}, and the additional benefit of \emph{History Adaptation}.
+We provide a progressive ablation on WikiText-2 under the same \(T=1500\) setting as the main benchmark, isolating the contribution of each adaptive component relative to a fixed-tree backbone. In this regime, adapting breadth alone can introduce control overhead without reliably increasing the committed prefix length, whereas dynamic depth control more directly increases per-iteration progress and yields the dominant throughput gain. Table~\ref{tab:ablation} therefore reports the combined effect of \emph{Dynamic Breadth \& Depth}, followed by the additional improvement from \emph{History Adaptation}, which stabilizes the draft configuration by reacting to recent verification outcomes.
 
 \begin{table}[t]
 \centering
