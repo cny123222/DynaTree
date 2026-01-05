@@ -324,6 +324,113 @@ class PG19Benchmark:
         return metrics
     
     @torch.inference_mode()
+    def benchmark_linear_spec(
+        self,
+        max_new_tokens: int,
+        K: int = 5,
+    ) -> Metrics:
+        """Benchmark linear speculative decoding (standard spec decode)."""
+        method_name = f"Linear Spec (K={K})"
+        
+        print(f"\n{'='*70}")
+        print(f"Benchmarking: {method_name}")
+        print(f"{'='*70}")
+        
+        from spec_decode.core.speculative_generator import SpeculativeGenerator
+        
+        metrics = Metrics(
+            method=method_name,
+            config={
+                "max_new_tokens": max_new_tokens,
+                "K": K,
+            }
+        )
+        
+        original_eos = self._disable_eos()
+        
+        generator = SpeculativeGenerator(
+            target_model=self.target_model,
+            draft_model=self.draft_model,
+            tokenizer=self.tokenizer,
+            K=K,
+            device=self.device,
+            use_compile=False
+        )
+        
+        all_ttft, all_tpot, all_throughput = [], [], []
+        all_acceptance, all_path_lengths, all_rounds = [], [], []
+        
+        for run_idx in range(self.warmup_runs + len(self.prompts)):
+            prompt_idx = run_idx % len(self.prompts)
+            prompt = self.prompts[prompt_idx]
+            is_warmup = run_idx < self.warmup_runs
+            
+            self._cleanup()
+            
+            # Measure TTFT
+            input_ids = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=1024).input_ids.to(self.device)
+            torch.cuda.synchronize()
+            start_ttft = time.perf_counter()
+            _ = self.target_model(input_ids=input_ids, use_cache=True, return_dict=True)
+            torch.cuda.synchronize()
+            ttft = (time.perf_counter() - start_ttft) * 1000
+            
+            with self._memory_tracking():
+                torch.cuda.synchronize()
+                start_time = time.perf_counter()
+                _ = generator.generate(prompt, max_new_tokens=max_new_tokens)
+                torch.cuda.synchronize()
+                total_time = (time.perf_counter() - start_time) * 1000
+                peak_memory = torch.cuda.max_memory_allocated() / 1024 / 1024
+            
+            stats = generator.get_stats()
+            num_tokens = stats['total_tokens']
+            throughput = num_tokens / (total_time / 1000)
+            tpot = (total_time - ttft) / num_tokens if num_tokens > 0 else 0
+            
+            # Linear spec decode acceptance rate
+            acceptance_rate = stats['total_accepted'] / stats['total_draft_tokens'] if stats['total_draft_tokens'] > 0 else 0
+            avg_accepted = stats['total_accepted'] / stats['total_rounds'] if stats['total_rounds'] > 0 else 0
+            
+            if not is_warmup:
+                all_ttft.append(ttft)
+                all_tpot.append(tpot)
+                all_throughput.append(throughput)
+                all_acceptance.append(acceptance_rate)
+                all_path_lengths.append(avg_accepted)
+                all_rounds.append(stats.get('total_rounds', 0))
+                
+                print(f"  Sample {run_idx - self.warmup_runs + 1}: {throughput:.1f} t/s, "
+                      f"accept={acceptance_rate:.1%}, avg_accepted={avg_accepted:.2f}")
+        
+        self._restore_eos(original_eos)
+        
+        # Calculate statistics
+        metrics.ttft_ms = np.mean(all_ttft)
+        metrics.ttft_std = np.std(all_ttft)
+        metrics.tpot_ms = np.mean(all_tpot)
+        metrics.tpot_std = np.std(all_tpot)
+        metrics.throughput_tps = np.mean(all_throughput)
+        metrics.throughput_std = np.std(all_throughput)
+        metrics.acceptance_rate = np.mean(all_acceptance)
+        metrics.acceptance_std = np.std(all_acceptance)
+        metrics.avg_path_length = np.mean(all_path_lengths)
+        metrics.path_length_std = np.std(all_path_lengths)
+        metrics.total_rounds = int(np.mean(all_rounds))
+        metrics.tokens_per_round = max_new_tokens / metrics.total_rounds if metrics.total_rounds > 0 else 0
+        metrics.total_tokens_generated = max_new_tokens
+        metrics.peak_memory_mb = peak_memory
+        
+        if self.baseline_throughput:
+            metrics.speedup = metrics.throughput_tps / self.baseline_throughput
+        
+        print(f"\nResults: {metrics.throughput_tps:.1f}±{metrics.throughput_std:.1f} t/s, "
+              f"Speedup={metrics.speedup:.2f}x, Accept={metrics.acceptance_rate:.1%}")
+        
+        self.all_results.append(metrics)
+        return metrics
+    
+    @torch.inference_mode()
     def benchmark_tree_spec_decode(
         self,
         max_new_tokens: int,
@@ -372,6 +479,7 @@ class PG19Benchmark:
             is_warmup = run_idx < self.warmup_runs
             
             self._cleanup()
+            # generator.reset() is called internally by generate()
             
             # Measure TTFT
             input_ids = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=1024).input_ids.to(self.device)
@@ -500,6 +608,7 @@ class PG19Benchmark:
             is_warmup = run_idx < self.warmup_runs
             
             self._cleanup()
+            # generator.reset() is called internally by generate()
             
             # Measure TTFT
             input_ids = self.tokenizer(prompt, return_tensors="pt", truncation=True, max_length=1024).input_ids.to(self.device)
@@ -584,8 +693,11 @@ class PG19Benchmark:
         print("# PG-19 DATASET COMPARISON")
         print("#"*80)
         
-        # Baseline
+        # Baseline (Autoregressive)
         self.benchmark_baseline(max_new_tokens)
+        
+        # Linear Spec Decode (standard speculative decoding)
+        self.benchmark_linear_spec(max_new_tokens, K=5)
         
         # Tree Spec Decode (fixed tree)
         self.benchmark_tree_spec_decode(max_new_tokens, tree_depth=5, branch_factor=2)
