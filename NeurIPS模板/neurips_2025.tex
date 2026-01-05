@@ -118,7 +118,7 @@ In summary, our contributions are:
   
   \item We introduce a three-phase adaptive mechanism combining confidence-based branching, dynamic depth control, and historical parameter tuning. Our ablation study reveals that dynamic depth contributes most to performance gains.
   
-  \item Experiments demonstrate that DynaTree achieves 1.61$\times$ speedup with 94.7\% acceptance rate, outperforming fixed tree baselines by 16.3\% with robust cross-dataset performance.
+  \item Experiments demonstrate that DynaTree achieves 1.61$\times$ speedup with 94.7\% acceptance rate, outperforming fixed tree baselines by 16.3\% across WikiText-2 and PG-19.
 \end{itemize}
 
 \begin{figure}[t]
@@ -392,10 +392,6 @@ Length & Optimal Config & Baseline (t/s) & DynaTree (t/s) & Speedup & Accept. \\
   \end{tabular}
 \end{table}
 
-\subsection{Cross-Dataset Robustness}
-\label{dataset-robustness}
-We report cross-dataset robustness directly in the main benchmark (Table~\ref{tab:main-results} and Figure~\ref{fig:main-results}), where each method is evaluated on both WikiText-2 and PG-19 under the same greedy decoding protocol with \(T=1500\).
-
 \subsection{Prompt Length Sensitivity}
 The length of the input prompt can significantly impact decoding performance due to prefill overhead and context dependencies. To assess DynaTree's sensitivity to prompt length, we evaluate all methods on WikiText-2 with varying maximum prompt lengths: 100, 200, 800, and 1000 tokens. As shown in Table~\ref{tab:prompt-length} and Figure~\ref{fig:prompt-length}, several trends emerge: (i)~All methods achieve peak performance at moderate prompt lengths (200 tokens), where the prefill cost is amortized without excessive context overhead. DynaTree D=6 reaches 197.9 tokens/sec (1.55\(\times\) speedup) at this length; (ii)~Performance degrades slightly at very long prompts (1000 tokens), with DynaTree maintaining 162.8 tokens/sec (1.21\(\times\) speedup), as prefill overhead increases; (iii)~DynaTree's relative advantage remains consistent across prompt lengths, with speedups ranging from 1.21\(\times\) to 1.55\(\times\), demonstrating robustness to varying context sizes. These results confirm that DynaTree's tree-based exploration strategy provides stable acceleration benefits across diverse prompt length regimes, making it suitable for applications with varying context requirements.
 
@@ -437,7 +433,7 @@ We introduced DynaTree, a tree-based speculative decoding framework that drafts 
 \label{app:exp-config}
 \paragraph{Common settings.}
 Unless stated otherwise, we use WikiText-2 prompts, truncate the prompt length to \(L_{\max}=800\), and generate \(T\) new tokens with greedy decoding. We evaluate \(N=10\) prompts and discard the first \(W=2\) runs as warmup.
-\paragraph{PG-19 cross-dataset setting.}
+\paragraph{PG-19 setting.}
 For PG-19, we use the same model pair and greedy decoding, with a maximum prompt length \(L_{\max}=1000\).
 \paragraph{Fixed-tree baseline.}
 For the static-tree baseline, we use depth \(D=5\), branching factor \(B=2\), and a node budget \(N_{\max}=256\).
