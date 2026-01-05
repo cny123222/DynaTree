@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """
-Generate grouped bar chart for DynaTree main results (Table 1).
+Generate grouped bar chart for Adaptive DynaTree main results.
+Data source: results/adaptive/main/paper_benchmark_main_1000tokens.json
 Each metric (Throughput, Speedup) is shown with bars for each method.
 """
+
+import json
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,17 +21,37 @@ plt.rcParams['axes.labelcolor'] = '#333333'
 plt.rcParams['xtick.color'] = '#333333'
 plt.rcParams['ytick.color'] = '#333333'
 
-# Data from Table 1 (main results) in neurips_2025.tex
-methods = ['AR\n(target-only)', 'HF\nAssisted', 'Linear\nSpec.\n(K=6)', 'StreamingLLM\n+ Spec.', 'DynaTree\n(Ours)']
-throughput = [119.4, 161.9, 133.1, 132.9, 193.4]  # tokens/sec
-speedup = [1.00, 1.36, 1.11, 1.11, 1.62]           # relative to AR
+data_path = Path("results/adaptive/main/paper_benchmark_main_1000tokens.json")
+data = json.loads(data_path.read_text())
+
+order = [
+    "Baseline (AR)",
+    "Fixed Tree (D=5, B=2)",
+    "Phase 1: Adaptive Branch",
+    "Phase 2: + Dynamic Depth",
+    "Phase 3: + History Adjust",
+]
+
+by_method = {r["method"]: r for r in data["all_results"]}
+missing = [m for m in order if m not in by_method]
+if missing:
+    raise RuntimeError(f"Missing methods in {data_path}: {missing}")
+
+methods = [
+    "AR",
+    "Fixed\nTree",
+    "Phase 1\nBranch",
+    "Phase 2\n+Depth",
+    "Phase 3\n+History",
+]
+throughput = [by_method[m]["throughput_tps"] for m in order]  # tokens/sec
+speedup = [by_method[m]["speedup"] for m in order]  # relative to AR (verified correct in this JSON)
 
 # Set up the figure - academic paper style with reduced width
 fig, axes = plt.subplots(1, 2, figsize=(10, 4))
 
-# Academic color palette - professional blue-to-orange gradient
-# Baselines in cool tones, our method in warm accent color
-colors = ['#4A708B', '#6495B8', '#8BACC6', '#A8C8D8', '#D97757']  # steel blue gradient + terra cotta
+# Academic color palette: baseline + progressive warm accent
+colors = ['#4A708B', '#7FA7C5', '#9FBED4', '#D9A08A', '#D97757']  # steel blues + terra cotta
 
 # --- Subplot 1: Throughput ---
 ax1 = axes[0]
@@ -36,7 +60,7 @@ ax1.set_ylabel('Throughput (tokens/sec)', fontsize=11)
 ax1.set_xlabel('Method', fontsize=11)
 ax1.set_xticks(range(len(methods)))
 ax1.set_xticklabels(methods, fontsize=9)
-ax1.set_ylim(0, max(throughput) * 1.15)
+ax1.set_ylim(0, max(throughput) * 1.18)
 ax1.grid(axis='y', linestyle=':', alpha=0.3, linewidth=0.5)
 # Add value labels on top of bars
 for i, (bar, val) in enumerate(zip(bars1, throughput)):
@@ -52,7 +76,7 @@ ax2.set_ylabel('Speedup', fontsize=11)
 ax2.set_xlabel('Method', fontsize=11)
 ax2.set_xticks(range(len(methods)))
 ax2.set_xticklabels(methods, fontsize=9)
-ax2.set_ylim(0, max(speedup) * 1.15)
+ax2.set_ylim(0, max(speedup) * 1.18)
 ax2.axhline(y=1.0, color='#666666', linestyle='--', linewidth=0.8, alpha=0.5)
 ax2.grid(axis='y', linestyle=':', alpha=0.3, linewidth=0.5)
 # Add value labels
@@ -74,5 +98,5 @@ output_pdf = 'figures/main_results_bars.pdf'
 plt.savefig(output_pdf, bbox_inches='tight')
 print(f"✓ PDF saved to: {output_pdf}")
 
-plt.show()
+plt.close(fig)
 

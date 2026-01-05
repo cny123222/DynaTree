@@ -263,74 +263,57 @@ All experiments are conducted on a single NVIDIA GPU with sufficient memory to a
 Our primary benchmark uses WikiText-2~\citep{merity2016pointer}. For each sampled prompt, we generate \(T\) new tokens using greedy decoding, where \(T=1000\) for the main results (Section~\ref{main-results}). We truncate prompts to a maximum length \(L_{\max}\) to control prefill cost, and use a fixed \(L_{\max}=800\) throughout WikiText-2 experiments. We evaluate \(N=10\) prompts and discard the first \(W=2\) runs as warmup; we report the mean and standard deviation over the remaining runs. To ensure fair comparison, we synchronize GPU execution and reset cached states between methods. We additionally report cross-dataset results on PG-19~\citep{rae2019compressive} (Section~\ref{dataset-robustness}) to validate robustness beyond Wikipedia-style text; full experimental configurations are summarized in Appendix~\ref{app:exp-config}.
 
 \subsection{Evaluation Metrics}
-We measure \textbf{throughput} (tokens per second) as the primary performance indicator, computed as the total number of generated tokens divided by the wall-clock time excluding warmup. We additionally report \textbf{speedup}, defined as the ratio of a method's throughput to that of the autoregressive baseline. When applicable, we also include the \textbf{acceptance rate}---the fraction of drafted tokens that match the target model's greedy predictions---and \textbf{tokens per iteration}, the average number of tokens committed in each decoding round.
+We report \textbf{throughput} (tokens per second) as the primary metric, computed as \(T\) divided by the wall-clock decoding time (excluding warmup). We additionally report \textbf{speedup} relative to autoregressive decoding, i.e., \(\mathrm{speedup}=\mathrm{TPS}/\mathrm{TPS}_{\mathrm{AR}}\). To characterize verification efficiency, we measure the \textbf{acceptance rate} \(a\), defined as the fraction of drafted tokens that match the target model's greedy predictions under the corresponding conditioning contexts, and the average \textbf{tokens per iteration} \(\bar{L}\), i.e., the number of committed tokens per verification round. We also report \textbf{average path length} \(\bar{\ell}\) (the mean depth of the greedy-consistent committed path before the bonus token) to reflect how far each verification step progresses. For latency, we include \textbf{time-to-first-token} (TTFT) and \textbf{time-per-output-token} (TPOT), averaged over prompts.
 
 \subsection{Baselines}
-We compare DynaTree against four baselines representing different levels of speculative decoding and cache management:
+We compare the proposed confidence-aware adaptive decoding against the following baselines and variants under identical greedy decoding settings:
 \begin{itemize}
   \item \textbf{Autoregressive (AR):} Standard greedy decoding with the target model, serving as the performance baseline.
-  \item \textbf{HuggingFace Assisted Generation:} The built-in speculative decoding implementation in the HuggingFace Transformers library, which uses the draft model to propose candidate tokens for verification.
-  \item \textbf{Linear Speculative Decoding:} A linear-chain variant of speculative decoding where the draft model proposes a sequence of \(K\) tokens that are verified in parallel by the target model~\cite{leviathan2023fast}.
-  \item \textbf{StreamingLLM + Speculative:} A combination of speculative decoding with StreamingLLM's attention sink mechanism for efficient long-context generation~\cite{streamingllm}.
+  \item \textbf{Fixed Tree:} A static tree speculative decoder with fixed depth \(D\), fixed branching factor \(B\), and node budget \(N_{\max}\), representing a non-adaptive tree baseline.
+  \item \textbf{DynaTree (Phase 1/2/3):} Progressive variants that add confidence-aware adaptive branching (Phase~1), dynamic depth control (Phase~2), and historical adjustment (Phase~3) on top of the fixed-tree backbone.
 \end{itemize}
 
 \subsection{Main Results}
 \label{main-results}
-Table~\ref{tab:main-results} presents the end-to-end throughput comparison for 500-token generation across all methods. \textbf{DynaTree} achieves a throughput of 193.4 tokens/sec, corresponding to a \textbf{1.62\(\times\) speedup} over the autoregressive baseline (119.4 tokens/sec). This represents a substantial improvement over strong baselines: DynaTree outperforms HuggingFace assisted generation by 19\% (1.62\(\times\) vs.\ 1.36\(\times\)) and linear speculative decoding by 46\% (1.62\(\times\) vs.\ 1.11\(\times\)). We also report acceptance rates where applicable; note that while tree-based methods exhibit lower per-token acceptance rates than linear chains (0.30 vs.\ 0.68), the ability to verify multiple paths in parallel more than compensates for this difference.
+Table~\ref{tab:main-results} reports the end-to-end performance on WikiText-2 for \(T=1000\) token generation. Relative to autoregressive decoding, a fixed tree already improves throughput to 181.3~t/s (1.38\(\times\)). Incorporating confidence-aware adaptation yields further gains: Phase~2 achieves 206.0~t/s (1.57\(\times\)), and Phase~3 reaches \textbf{210.8~t/s} (\textbf{1.61\(\times\)}), a 16.3\% throughput improvement over the fixed-tree baseline. These results show that adapting tree breadth and depth to model confidence can increase per-iteration progress while maintaining greedy correctness.
 
 \begin{table}[t]
 \centering
-\caption{\textbf{Main results: end-to-end performance comparison on 500-token generation with Pythia models.} Throughput is measured in tokens per second (t/s). Speedup is relative to the autoregressive baseline. Acceptance rate indicates the percentage of drafted tokens accepted by the target model. DynaTree achieves the highest throughput among training-free methods.}
+\caption{\textbf{Main results on WikiText-2 (greedy decoding, \(T=1000\)).} Throughput is measured in tokens per second (t/s). Speedup is relative to autoregressive decoding. Accept.\ rate is the fraction of drafted tokens that match the target model's greedy predictions; Tokens/Iter reports the average number of tokens committed per verification round; Avg.\ Path Len is the mean committed path length (before the bonus token). We report mean\(\pm\)std over prompts (excluding warmup).}
 \label{tab:main-results}
-\begin{tabular}{lcccc}
+\small
+\begin{tabular}{lccccc}
 \toprule
-Method & Throughput (t/s) & Speedup & Accept. (\%) & Tokens/Iter \\
+Method & Throughput (t/s) & Speedup & Accept. (\%) & Tokens/Iter & Avg.\ Path Len \\
 \midrule
-AR (target-only) & 119.4 & 1.00\(\times\) & -- & 1.0 \\
-HuggingFace assisted & 161.9 & 1.36\(\times\) & -- & 3.0 \\
-Linear speculative (K=6) & 133.1 & 1.11\(\times\) & 81.2 & 4.87 \\
-Linear speculative (K=7) & 138.7 & 1.16\(\times\) & 76.2 & 5.33 \\
-StreamingLLM + speculative & 132.9 & 1.11\(\times\) & -- & -- \\
-\textbf{DynaTree (D=6, B=2)} & \textbf{185.2} & \textbf{1.55\(\times\)} & \textbf{79.5} & \textbf{5.56} \\
-DynaTree (D=7, B=2) & 184.6 & 1.55\(\times\) & 72.6 & 5.81 \\
+AR & 131.1\(\pm\)0.4 & 1.00\(\times\) & -- & 1.00 & -- \\
+Fixed Tree (\(D=5,B=2\)) & 181.3\(\pm\)12.3 & 1.38\(\times\) & 80.8 & 5.65 & 5.65 \\
+Phase~1: Adaptive Branch & 176.7\(\pm\)36.2 & 1.35\(\times\) & 77.9 & 5.35 & 5.45 \\
+Phase~2: + Dynamic Depth & 206.0\(\pm\)29.8 & 1.57\(\times\) & 89.6 & 6.06 & 6.27 \\
+\textbf{Phase~3: + History Adjust} & \textbf{210.8\(\pm\)26.5} & \textbf{1.61\(\times\)} & \textbf{94.7} & \textbf{6.49} & \textbf{6.63} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Figure~\ref{fig:main-results} visualizes these results. Although tree-based drafting exhibits lower per-token acceptance rates than linear chains, DynaTree's multi-path exploration substantially increases the probability of finding a long valid prefix in each verification step. Combined with adaptive pruning to control the verification budget, this design achieves the best overall throughput among all evaluated methods.
-
-\paragraph{Verification efficiency analysis.}
-Table~\ref{tab:verification-efficiency} provides a detailed breakdown of verification efficiency metrics for the optimal configurations. DynaTree (D=8, B=3, \(\tau\)=0.03) commits an average of 6.94 tokens per iteration---69\% more than linear speculative decoding (4.10 tokens/iter)---despite having a lower per-token acceptance rate (38\% vs.\ 68\%). This demonstrates that tree-based drafting's multi-path exploration enables longer committed sequences per verification round, offsetting the reduced per-token acceptance and ultimately yielding higher end-to-end throughput.
+Figure~\ref{fig:main-results} visualizes the throughput and speedup trends across variants. Phase~2 and Phase~3 reduce the number of verification rounds by committing longer greedy-consistent prefixes per iteration, which translates into a substantially lower per-token latency (TPOT) while preserving deterministic outputs.
 
 \paragraph{Latency breakdown analysis.}
-To understand the fine-grained latency characteristics, Table~\ref{tab:latency-metrics} reports Time-To-First-Token (TTFT) and Time-Per-Output-Token (TPOT) for each method on WikiText-2 with 500-token generation. TTFT measures the latency from request submission to the first generated token, while TPOT measures the average per-token generation latency thereafter. Key observations include: (i)~All speculative methods reduce TTFT by 30--35\% compared to autoregressive decoding (18.7~ms vs.\ 12.2--12.5~ms), as the draft model's first prediction is verified faster; (ii)~DynaTree achieves the lowest TPOT among all speculative methods (5.46~ms), outperforming Linear K=6 (6.16~ms) by 11\% due to its higher tokens-per-iteration efficiency. These latency metrics confirm that DynaTree provides not only higher throughput but also competitive per-token latency, making it suitable for both batch and interactive serving scenarios.
+To understand fine-grained latency characteristics, Table~\ref{tab:latency-metrics} reports Time-To-First-Token (TTFT) and Time-Per-Output-Token (TPOT) on WikiText-2 for \(T=1000\). While all speculative variants substantially reduce TTFT relative to autoregressive decoding, the largest gains appear in TPOT: Phase~3 achieves the lowest TPOT (4.81~ms), consistent with its higher tokens-per-iteration progress.
 
 \begin{table}[t]
 \centering
-\caption{\textbf{Latency metrics on WikiText-2 (500-token generation).} We report Time-To-First-Token (TTFT, latency to first output token) and Time-Per-Output-Token (TPOT, average per-token latency). DynaTree achieves the lowest TPOT among all evaluated methods, demonstrating efficient per-iteration verification.}
+\caption{\textbf{Latency metrics on WikiText-2 (\(T=1000\)).} We report TTFT (latency to first output token) and TPOT (average per-token latency). Values are mean\(\pm\)std over prompts (excluding warmup).}
 \label{tab:latency-metrics}
+\small
 \begin{tabular}{lcc}
 \toprule
 Method & TTFT (ms) & TPOT (ms) \\
 \midrule
-AR (target-only) & 18.69 & 7.47 \\
-Linear speculative (K=6) & 12.17 & 6.16 \\
-\textbf{DynaTree (D=6, B=2)} & \textbf{12.48} & \textbf{5.46} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[t]
-\centering
-\caption{\textbf{Verification efficiency comparison.} We report drafting budget (K for linear, expected tree size for DynaTree), tokens committed per iteration, and per-token acceptance rate for linear and tree-based methods at their optimal configurations on 500-token generation. Despite lower per-token acceptance, DynaTree's multi-path exploration commits substantially more tokens per verification step, demonstrating the value of exploring multiple candidate paths in parallel.}
-\label{tab:verification-efficiency}
-\begin{tabular}{lccc}
-\toprule
-Method & Draft Budget & Tokens/Iter & Accept. Rate \\
-\midrule
-Linear speculative (K=6) & 6 & 4.10 & 0.68 \\
-HuggingFace assisted & -- & -- & -- \\
-\textbf{DynaTree (D=8,B=3,\(\tau\)=0.03)} & \textbf{\(\sim\)18} & \textbf{6.94} & 0.38 \\
+AR & 18.9\(\pm\)6.1 & 7.61\(\pm\)0.02 \\
+Fixed Tree (\(D=5,B=2\)) & 12.7\(\pm\)2.7 & 5.53\(\pm\)0.38 \\
+Phase~1: Adaptive Branch & 13.9\(\pm\)5.4 & 5.98\(\pm\)1.71 \\
+Phase~2: + Dynamic Depth & 12.5\(\pm\)2.7 & 4.95\(\pm\)0.77 \\
+\textbf{Phase~3: + History Adjust} & 12.6\(\pm\)2.7 & \textbf{4.81\(\pm\)0.63} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -338,7 +321,7 @@ HuggingFace assisted & -- & -- & -- \\
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.85\linewidth]{../figures/main_results_bars.pdf}
-  \caption{\textbf{Throughput and speedup comparison across methods.} Left: absolute throughput in tokens per second. Right: speedup relative to autoregressive baseline. DynaTree achieves 193.4~t/s (1.62\(\times\)), outperforming HuggingFace assisted generation (1.36\(\times\)) and linear speculative decoding (1.11\(\times\)) by substantial margins. All results are averaged over 5 runs on 500-token generation with Pythia-2.8B and Pythia-70M models.}
+  \caption{\textbf{Throughput and speedup on WikiText-2 (\(T=1000\)).} Left: absolute throughput (tokens/s). Right: speedup relative to autoregressive decoding. Phase~3 achieves the highest throughput (210.8~t/s, 1.61\(\times\)), improving over the fixed-tree baseline (181.3~t/s, 1.38\(\times\)).}
   \label{fig:main-results}
 \end{figure}
 
