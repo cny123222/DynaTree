@@ -90,7 +90,8 @@ def main() -> None:
     ax.set_xlabel(r"Tree depth $D$ (fix $B$)", fontsize=10)
     ax.set_ylabel("Speedup", fontsize=10)
     ax.grid(True, linestyle=":", alpha=0.35, linewidth=0.6)
-    ax.set_ylim(1.0, max(2.6, float(np.max(y)) * 1.25))
+    # Wider y-range: keep the first point visible while conveying stability.
+    ax.set_ylim(min(0.8, float(np.min(y)) * 0.95), max(3.0, float(np.max(y)) * 1.25))
 
     # (b) Best speedup vs branching factor (fix D=best_D)
     ax = axes[0, 1]
@@ -101,7 +102,7 @@ def main() -> None:
     ax.set_xlabel(r"Branch factor $B$ (fix $D$)", fontsize=10)
     ax.set_ylabel("Speedup", fontsize=10)
     ax.grid(True, linestyle=":", alpha=0.35, linewidth=0.6)
-    ax.set_ylim(1.0, max(2.6, float(np.max(y)) * 1.25))
+    ax.set_ylim(min(0.8, float(np.min(y)) * 0.95), max(3.0, float(np.max(y)) * 1.25))
 
     # (c) Speedup vs pruning threshold (fix D=best_D,B=best_B)
     ax = axes[0, 2]
@@ -112,7 +113,7 @@ def main() -> None:
     ax.set_ylabel("Speedup", fontsize=10)
     ax.set_xscale("log")
     ax.grid(True, linestyle=":", alpha=0.35, linewidth=0.6)
-    ax.set_ylim(1.0, max(2.6, float(np.max(y)) * 1.25))
+    ax.set_ylim(min(0.8, float(np.min(y)) * 0.95), max(3.0, float(np.max(y)) * 1.25))
 
     # (d) Heatmap: best speedup over tau for each (D,B)
     ax = axes[1, 0]
@@ -128,18 +129,7 @@ def main() -> None:
     ax.set_xlabel(r"$B$", fontsize=10)
     ax.set_ylabel(r"$D$", fontsize=10)
     ax.set_title("(d) Best speedup over $\\tau$", fontsize=11, pad=8)
-    # highlight best cell with a dashed rectangle (no star marker)
-    from matplotlib.patches import Rectangle
-    rect = Rectangle(
-        (branches.index(best_B) - 0.5, depths.index(best_D) - 0.5),
-        1,
-        1,
-        linewidth=2.0,
-        edgecolor="#D97757",
-        facecolor="none",
-        linestyle="--",
-    )
-    ax.add_patch(rect)
+    # No explicit best-cell highlight (paper presentation focuses on robustness).
     cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     cbar.set_label("Speedup", fontsize=9)
 
@@ -158,16 +148,7 @@ def main() -> None:
     ax.set_xlabel(r"$B$", fontsize=10)
     ax.set_ylabel(r"$D$", fontsize=10)
     ax.set_title("(e) Avg path length at best $\\tau$", fontsize=11, pad=8)
-    rect2 = Rectangle(
-        (branches.index(best_B) - 0.5, depths.index(best_D) - 0.5),
-        1,
-        1,
-        linewidth=2.0,
-        edgecolor="#D97757",
-        facecolor="none",
-        linestyle="--",
-    )
-    ax.add_patch(rect2)
+    # No explicit best-cell highlight.
     cbar2 = plt.colorbar(im2, ax=ax, fraction=0.046, pad=0.04)
     cbar2.set_label(r"$\bar{\ell}$", fontsize=9)
 
