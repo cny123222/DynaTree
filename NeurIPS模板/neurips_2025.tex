@@ -324,7 +324,7 @@ Table~\ref{tab:latency-metrics} reports TTFT and TPOT for \(T=1500\). Across dat
 
 \begin{table}[tbp]
 \centering
-\caption{\textbf{Latency metrics (\(T=1500\)).} We report TTFT (latency to first output token) and TPOT (average per-token latency) on WikiText-2 and PG-19. Values are mean\(\pm\)std over prompts (excluding warmup).}
+\caption{\textbf{Latency metrics (\(T=1500\)).} We report TTFT (latency to first output token) and TPOT (average per-token latency) on WikiText-2 and PG-19. Values are mean\(\pm\)std over prompts (excluding warmup). For linear speculation, we use \(K=8\) on WikiText-2 and \(K=5\) on PG-19.}
 \label{tab:latency-metrics}
 \small
 \begin{tabular}{lcccc}
@@ -333,10 +333,10 @@ Method & \multicolumn{2}{c}{WikiText-2} & \multicolumn{2}{c}{PG-19} \\
 \cmidrule(lr){2-3} \cmidrule(lr){4-5}
 & TTFT (ms) & TPOT (ms) & TTFT (ms) & TPOT (ms) \\
 \midrule
-AR & 18.9\(\pm\)6.1 & 7.48\(\pm\)0.02 & 20.0\(\pm\)4.5 & 7.46\(\pm\)0.04 \\
-Linear Spec (\(K=8\)) & 14.6\(\pm\)4.0 & 5.32\(\pm\)1.24 & 10.5\(\pm\)1.9 & 6.71\(\pm\)1.42 \\
-Fixed Tree (\(D=8,B=3,\tau=0.1\)) & 14.6\(\pm\)4.2 & 5.30\(\pm\)1.63 & 10.4\(\pm\)0.4 & 5.54\(\pm\)0.75 \\
-\textbf{DynaTree} & 14.4\(\pm\)4.0 & \textbf{4.59\(\pm\)0.47} & 9.9\(\pm\)0.6 & \textbf{5.38\(\pm\)1.03} \\
+AR & 18.9\(\pm\)6.1 & 7.48\(\pm\)0.02 & 21.8\(\pm\)8.7 & 9.00\(\pm\)1.69 \\
+Linear Spec & 14.6\(\pm\)4.0 & 5.32\(\pm\)1.24 & 11.1\(\pm\)3.3 & 7.17\(\pm\)1.42 \\
+Fixed Tree (\(D=8,B=3,\tau=0.1\)) & 14.6\(\pm\)4.2 & 5.30\(\pm\)1.63 & 9.7\(\pm\)0.4 & 5.55\(\pm\)0.95 \\
+\textbf{DynaTree} & 14.4\(\pm\)4.0 & \textbf{4.59\(\pm\)0.47} & 9.6\(\pm\)0.6 & \textbf{5.30\(\pm\)1.02} \\
 \bottomrule
 \end{tabular}
 \end{table}

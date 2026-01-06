@@ -2,8 +2,8 @@
 """
 Generate grouped bar chart for main results across two datasets (WikiText-2 vs PG-19).
 Data sources (source of truth):
-  - results/adaptive/main_D8B3/1500_2/results.json   (WikiText-2)
-  - results/adaptive/pg19/pg19_benchmark_1500tokens.json
+  - results/adaptive/main_D8B3/1500_2/results.json        (WikiText-2)
+  - results/adaptive/pg19/pg19_benchmark_D8B3.json        (PG-19)
 
 Each subplot shows grouped bars per method with two bars (WikiText-2, PG-19).
 """
@@ -25,7 +25,7 @@ plt.rcParams['xtick.color'] = '#333333'
 plt.rcParams['ytick.color'] = '#333333'
 
 wt_path = Path("results/adaptive/main_D8B3/1500_2/results.json")
-pg_path = Path("results/adaptive/pg19/pg19_benchmark_1500tokens.json")
+pg_path = Path("results/adaptive/pg19/pg19_benchmark_D8B3.json")
 wt = json.loads(wt_path.read_text())
 pg = json.loads(pg_path.read_text())
 
@@ -55,7 +55,7 @@ wt_dyn = pick(wt_rows, equals="Phase 3: + History Adjust")
 
 pg_ar = pick(pg_rows, equals="Baseline (AR)")
 pg_linear = pick(pg_rows, equals="Linear Spec (K=5)")
-pg_fixed = pick(pg_rows, equals="Tree Spec Decode (D=5, B=2)")
+pg_fixed = pick(pg_rows, startswith="Tree Spec Decode (D=8, B=3")
 pg_dyn = pick(pg_rows, equals="Adaptive Tree (Phase 3)")
 
 plot_methods = [
