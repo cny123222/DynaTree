@@ -434,11 +434,12 @@ class PG19Benchmark:
     def benchmark_tree_spec_decode(
         self,
         max_new_tokens: int,
-        tree_depth: int = 5,
-        branch_factor: int = 2,
+        tree_depth: int = 8,
+        branch_factor: int = 3,
+        probability_threshold: float = 0.1,
     ) -> Metrics:
         """Benchmark fixed tree speculative decoding."""
-        method_name = f"Tree Spec Decode (D={tree_depth}, B={branch_factor})"
+        method_name = f"Tree Spec Decode (D={tree_depth}, B={branch_factor}, T={probability_threshold})"
         
         print(f"\n{'='*70}")
         print(f"Benchmarking: {method_name}")
@@ -452,6 +453,7 @@ class PG19Benchmark:
                 "max_new_tokens": max_new_tokens,
                 "tree_depth": tree_depth,
                 "branch_factor": branch_factor,
+                "probability_threshold": probability_threshold,
                 "max_tree_nodes": 256,
             }
         )
@@ -464,7 +466,7 @@ class PG19Benchmark:
             tokenizer=self.tokenizer,
             tree_depth=tree_depth,
             branch_factor=branch_factor,
-            probability_threshold=0.05,
+            probability_threshold=probability_threshold,
             max_tree_nodes=256,
             device=self.device,
             use_compile=False
@@ -699,8 +701,8 @@ class PG19Benchmark:
         # Linear Spec Decode (standard speculative decoding)
         self.benchmark_linear_spec(max_new_tokens, K=5)
         
-        # Tree Spec Decode (fixed tree)
-        self.benchmark_tree_spec_decode(max_new_tokens, tree_depth=5, branch_factor=2)
+        # Tree Spec Decode (fixed tree) - D=8, B=3, T=0.1
+        self.benchmark_tree_spec_decode(max_new_tokens, tree_depth=8, branch_factor=3, probability_threshold=0.1)
         
         # Adaptive Tree (Phase 3)
         self.benchmark_adaptive_tree(max_new_tokens)
