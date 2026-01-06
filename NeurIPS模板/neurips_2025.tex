@@ -410,35 +410,33 @@ Unless stated otherwise, the adaptive configuration uses base depth \(D_0=5\), m
 Some auxiliary result files include a placeholder \texttt{speedup} field; throughout this appendix we report speedup as the ratio between the method throughput and the corresponding autoregressive throughput under the same setting.
 
 \subsection{Parameter Sensitivity}
-We study the sensitivity of DynaTree to confidence thresholds \((\tau_h,\tau_\ell)\) and branch bounds \((B_{\min},B_{\max})\) on WikiText-2 at \(T=500\). Table~\ref{tab:appendix-sensitivity} reports representative configurations with the highest throughput in \texttt{results/adaptive/sensitivity/paper\_benchmark\_sensitivity.json}.
+We study the sensitivity of DynaTree to confidence thresholds \((\tau_h,\tau_\ell)\) and branch bounds \((B_{\min},B_{\max})\) on WikiText-2 at \(T=1000\). Table~\ref{tab:appendix-sensitivity} reports representative high-performing configurations from the released sweep logs.
 
 \begin{table}[t]
 \centering
-\caption{\textbf{Parameter sensitivity on WikiText-2 (\(T=500\)).} Results are computed from the experiment logs released with this work. Speedup is relative to AR under the same setting.}
+\caption{\textbf{Parameter sensitivity on WikiText-2 (\(T=1000\)).} We vary \((\tau_h,\tau_\ell)\) and \((B_{\min},B_{\max})\) and report representative high-performing configurations. Throughput is in tokens/s (mean\(\pm\)std across prompts), and speedup is relative to AR under the same setting.}
 \label{tab:appendix-sensitivity}
 \small
 \begin{tabular}{lccc}
 \toprule
 Setting & Throughput (t/s) & Speedup & Accept. \\
 \midrule
-AR & 99.2\(\pm\)22.3 & 1.00\(\times\) & 0.0\% \\
-\((\tau_h,\tau_\ell)=(0.9,0.4),\ (B_{\min},B_{\max})=(1,4)\) & 180.5\(\pm\)29.6 & 1.82\(\times\) & 81.1\% \\
-\((\tau_h,\tau_\ell)=(0.8,0.3),\ (B_{\min},B_{\max})=(1,3)\) & 179.0\(\pm\)27.3 & 1.80\(\times\) & 79.7\% \\
-\((\tau_h,\tau_\ell)=(0.8,0.3),\ (B_{\min},B_{\max})=(1,2)\) & 178.3\(\pm\)29.2 & 1.80\(\times\) & 78.6\% \\
-\((\tau_h,\tau_\ell)=(0.8,0.3),\ (B_{\min},B_{\max})=(1,4)\) & 174.8\(\pm\)31.3 & 1.76\(\times\) & 77.3\% \\
+AR & 133.5\(\pm\)0.6 & 1.00\(\times\) & 0.0\% \\
+\((\tau_h,\tau_\ell)=(0.9,0.4),\ (B_{\min},B_{\max})=(1,2)\) & 215.3\(\pm\)38.9 & 1.61\(\times\) & 93.8\% \\
+\((\tau_h,\tau_\ell)=(0.9,0.4),\ (B_{\min},B_{\max})=(1,4)\) & 215.3\(\pm\)27.4 & 1.61\(\times\) & 95.6\% \\
+\((\tau_h,\tau_\ell)=(0.8,0.3),\ (B_{\min},B_{\max})=(1,3)\) & 210.4\(\pm\)28.5 & 1.58\(\times\) & 93.3\% \\
+\((\tau_h,\tau_\ell)=(0.7,0.2),\ (B_{\min},B_{\max})=(1,3)\) & 207.1\(\pm\)35.7 & 1.55\(\times\) & 91.3\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \section{Memory Footprint Analysis}
 \label{app:memory}
-An important practical consideration for speculative decoding methods is their memory overhead. Table~\ref{tab:memory-footprint} reports peak GPU memory consumption across methods on PG-19 and WikiText-2 datasets during 500-token generation with Pythia models. All measurements are taken using PyTorch's memory profiler during steady-state generation (excluding initial model loading).
-
-Key observations: (i)~DynaTree incurs minimal memory overhead (+0.45\% on average) compared to the autoregressive baseline, adding only~26~MB to accommodate the draft model's KV cache and intermediate tree structures; (ii)~Linear speculative methods show similarly negligible overhead ($<$1\%), as they maintain only a small fixed-size buffer of candidate tokens. Across all methods, memory overhead remains well within 1\% of the baseline, confirming that speculative decoding's primary cost is computational rather than memory-related. This makes DynaTree suitable for memory-constrained deployment scenarios where the target and draft models can already fit in GPU memory.
+An important practical consideration for speculative decoding methods is their memory overhead. Table~\ref{tab:memory-footprint} reports peak GPU memory consumption across methods on PG-19 and WikiText-2 during the \(T=1500\) main benchmark. Overall, speculative decoding introduces a modest additional peak allocation (about 3\% on average in this setup) to maintain the draft-model KV cache and intermediate verification structures.
 
 \begin{table}[t]
 \centering
-\caption{\textbf{Peak GPU memory consumption comparison.} We measure peak memory usage during 500-token generation on PG-19 (long-form fiction) and WikiText-2 (structured articles) with Pythia-2.8B and Pythia-70M models. All speculative methods incur minimal memory overhead ($<$1\% relative to baseline), with DynaTree adding only 0.45\% on average to accommodate tree structures and draft KV cache. Values show mean peak memory across 10 runs; relative change is computed against the autoregressive baseline.}
+\caption{\textbf{Peak GPU memory consumption comparison (\(T=1500\)).} Peak GPU memory (MB) during generation on PG-19 and WikiText-2 with Pythia-2.8B and Pythia-70M. Relative change is computed against the autoregressive baseline using the average of the two datasets.}
 \label{tab:memory-footprint}
 \small
 \begin{tabular}{lccccc}
@@ -447,11 +445,10 @@ Key observations: (i)~DynaTree incurs minimal memory overhead (+0.45\% on averag
 \cmidrule(lr){2-3}
 & PG-19 & WikiText-2 & & \\
 \midrule
-AR (baseline) & 5855.1 & 5798.6 & 5826.9 & 0.00\% \\
-Linear K=6 & 5817.3 & 5786.3 & 5801.8 & $-$0.43\% \\
-Linear K=7 & 5817.7 & 5786.2 & 5801.9 & $-$0.43\% \\
-\textbf{DynaTree (D=6, B=2)} & \textbf{5883.7} & \textbf{5822.9} & \textbf{5853.3} & \textbf{+0.45\%} \\
-DynaTree (D=7, B=2) & 5883.7 & 5822.9 & 5853.3 & +0.45\% \\
+AR (baseline) & 6157.7 & 6110.0 & 6133.9 & 0.00\% \\
+Linear Spec (\(K=5\)) & 6360.5 & 6313.8 & 6337.2 & +3.31\% \\
+Fixed Tree (\(D=5,B=2\)) & 6358.3 & 6312.8 & 6335.5 & +3.29\% \\
+\textbf{DynaTree} & \textbf{6359.4} & \textbf{6316.1} & \textbf{6337.7} & \textbf{+3.32\%} \\
 \bottomrule
 \end{tabular}
 \end{table}
