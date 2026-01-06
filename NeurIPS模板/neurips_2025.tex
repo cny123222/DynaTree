@@ -160,14 +160,17 @@ Exponential candidate growth necessitates pruning to balance exploration against
 \label{method}
 
 \subsection{Problem Setup and Notation}
-Let \(M_T\) denote a target autoregressive language model and \(M_D\) a smaller draft model. Given a prefix (prompt) \(x_{1:t}\), greedy decoding with \(M_T\) produces tokens \(y_{t+1}, y_{t+2}, \dots\) where
+Let \(M_T\) denote a target autoregressive language model and \(M_D\) a smaller draft model over vocabulary \(\mathcal{V}\). We write \(p_T(\cdot\mid\cdot)\) and \(p_D(\cdot\mid\cdot)\) for their next-token distributions. Given a prefix (prompt) \(x_{1:t}\), greedy decoding with \(M_T\) produces tokens \(y_{t+1}, y_{t+2}, \dots\) via
 \[
 y_{i} \;=\; \arg\max_{v \in \mathcal{V}} p_T(v \mid x_{1:i-1}).
 \]
-Speculative decoding accelerates generation by proposing candidate tokens with \(M_D\) and verifying them with \(M_T\), while preserving the greedy output when the verification rule only commits tokens that match the target greedy predictions.
+Speculative decoding accelerates generation by proposing candidate tokens with \(M_D\) and verifying them with \(M_T\). In this paper we focus on greedy decoding; correctness requires that a token is committed only if it matches the target model's greedy argmax under the corresponding conditioning context.
 
 \subsection{Overview of DynaTree}
-DynaTree generalizes linear speculative decoding from a single draft chain to a \emph{draft token tree}. In each iteration, it first performs \emph{adaptive tree drafting} with \(M_D\), where the effective tree breadth and depth are determined on-the-fly from the draft distribution and the cumulative path probability. Concretely, for a draft node \(u\) with draft logits \(\mathbf{h}(u)\), we define the draft confidence \(c(u)=\max_{v\in\mathcal{V}}\mathrm{softmax}(\mathbf{h}(u))_v\) and use it to select a per-node branching factor \(B(u)\in\{B_{\min},B_{\mathrm{mid}},B_{\max}\}\). We further control expansion depth via the cumulative probability \(p(u)=\exp(\bar{\ell}_u)\), combining early stopping for low-probability branches with deeper expansion along high-probability paths. The resulting candidate tree is then \textbf{verified in parallel} in a single forward pass of \(M_T\) using tree attention, followed by \textbf{greedy path selection} and \textbf{KV-cache update} for committed tokens. Finally, DynaTree maintains a short window of recent acceptance statistics to adjust drafting thresholds for subsequent iterations.
+DynaTree generalizes linear speculative decoding from a single draft chain to a \emph{draft token tree}. In each iteration, it constructs a candidate tree with \(M_D\) and verifies all drafted nodes in a single forward pass of \(M_T\) using tree attention. DynaTree's key innovation is \emph{confidence-aware adaptive drafting} that allocates verification budget based on draft uncertainty:
+\textbf{(i) Dynamic breadth} selects a per-node branching factor from \(\{B_{\min},B_{\mathrm{mid}},B_{\max}\}\) using confidence thresholds \((\tau_h,\tau_\ell)\);
+\textbf{(ii) dynamic depth} gates expansion using cumulative path probability with early stopping and selective deep expansion up to \(D_{\max}\);
+and \textbf{(iii) history adaptation} updates a small subset of drafting hyperparameters online using recent acceptance statistics.
 
 \begin{figure}[tbp]
   \centering
@@ -177,7 +180,7 @@ DynaTree generalizes linear speculative decoding from a single draft chain to a 
 \end{figure}
 
 \subsection{Adaptive Tree Drafting}
-We maintain a token tree \(\mathcal{T}=(\mathcal{N}, \mathcal{E})\) whose nodes \(u \in \mathcal{N}\) correspond to drafted tokens. Each node \(u\) is associated with: (i)~\emph{token} \(z_u \in \mathcal{V}\); (ii)~\emph{parent} \(\pi(u)\); (iii)~\emph{depth} \(d(u)\) from root; (iv)~\emph{draft log-probability} \(\ell_u = \log p_D(z_u \mid \text{prefix}(\pi(u)))\); and (v)~\emph{cumulative log-probability} \(\bar{\ell}_u = \sum_{v \in \text{path}(u)} \ell_v\), where \(\text{path}(u)\) denotes all nodes from root to \(u\) along the tree.
+We maintain a token tree \(\mathcal{T}=(\mathcal{N}, \mathcal{E})\) rooted at the current prefix \(x_{1:t}\), where each node \(u \in \mathcal{N}\) corresponds to a drafted token. Each node \(u\) is associated with: (i) token \(z_u \in \mathcal{V}\); (ii) parent \(\pi(u)\); (iii) depth \(d(u)\) from the root; (iv) draft log-probability \(\ell_u = \log p_D(z_u \mid \mathrm{ctx}(\pi(u)))\), where \(\mathrm{ctx}(\pi(u))\) denotes the unique root-to-\(\pi(u)\) token context; and (v) cumulative log-probability \(\bar{\ell}_u = \sum_{v \in \mathrm{path}(u)} \ell_v\), where \(\mathrm{path}(u)\) denotes the nodes on the root-to-\(u\) path. We also use the cumulative path probability \(p(u)=\exp(\bar{\ell}_u)\).
 
 \paragraph{Tree expansion.}
 Starting from the current prefix \(x_{1:t}\), we construct \(\mathcal{T}\) in a breadth-first manner under a strict node budget \(N_{\max}\). For any expandable node \(u\), let \(q_D(\cdot \mid u)\) denote the draft distribution conditioned on the unique root-to-\(u\) prefix, and define the local confidence
@@ -216,23 +219,28 @@ p(u) \;<\; \tau \quad \Longrightarrow \quad \text{prune } u.
 This rule focuses the target-model verification budget on paths that are jointly plausible under the draft model. Additionally, we enforce a strict node budget \(N_{\max}\) during construction; when \(|\mathcal{N}|=N_{\max}\), expansion stops and remaining frontier nodes are treated as leaves.
 
 \paragraph{Historical adjustment.}
-Finally, DynaTree adapts drafting thresholds online using recent verification outcomes. Let \(a_r\in[0,1]\) denote the per-iteration acceptance statistic at iteration \(r\) (i.e., the fraction of drafted tokens committed in that iteration), and let \(\bar{a}_t\) be the sliding-window mean over the last \(W\) iterations:
+Finally, DynaTree adapts a small subset of drafting hyperparameters online using recent verification outcomes. Let \(a_r\in[0,1]\) denote the per-iteration acceptance statistic at iteration \(r\) (fraction of drafted tokens committed in that iteration), and let \(\bar{a}_t\) be the sliding-window mean over the last \(W\) iterations:
 \[
 \bar{a}_t \;=\; \frac{1}{W}\sum_{i=0}^{W-1} a_{t-i}.
 \]
 Here \(W\) is a fixed window size.
-When \(\bar{a}_t\) is high, we make drafting more aggressive (e.g., increasing \(D_0\) or lowering \(\tau_h\)); when \(\bar{a}_t\) is low, we become more conservative to avoid verification waste. We defer the exact update schedule to Appendix~\ref{app:algo}.
+We use a simple proportional-control update around a target acceptance level \(a^\star\in(0,1)\). For example, for base depth \(D_0\) and high-confidence threshold \(\tau_h\),
+\[
+D_0 \leftarrow \mathrm{clip}\!\left(D_0 + \eta_D(\bar{a}_t-a^\star),\,1,\,D_{\max}-1\right),\quad
+\tau_h \leftarrow \mathrm{clip}\!\left(\tau_h - \eta_h(\bar{a}_t-a^\star),\,0,\,1\right),
+\]
+with step sizes \(\eta_D,\eta_h>0\) and \(\mathrm{clip}(\cdot)\) enforcing valid ranges. Intuitively, if recent acceptance is high (\(\bar{a}_t>a^\star\)), we increase drafting aggressiveness; otherwise we become more conservative. The exact parameter subset and schedule follow the same principle and are provided in Appendix~\ref{app:algo}.
 
 % (Moved long pseudocode to the appendix to save space in the main paper.)
 We provide full pseudocode for one DynaTree iteration in Appendix~\ref{app:algo}.
 
 \subsection{Tree Attention for Parallel Verification}
-To verify all drafted tokens in one target-model forward pass, we \emph{flatten} the tree in breadth-first order (BFS), producing a sequence \(z_{1:n}\) where each token corresponds to one node and all ancestors appear earlier than descendants. We then construct a boolean attention mask \(\mathbf{A} \in \{0,1\}^{n \times (t+n)}\) such that each drafted token attends to: (i) all prefix tokens \(x_{1:t}\), and (ii) only its ancestors (including itself) in the flattened tree:
+To verify all drafted tokens in one target-model forward pass, we \emph{flatten} the tree in breadth-first order (BFS), producing an ordered node list \((u_1,\dots,u_n)\) and token sequence \(z_{1:n}\) where \(z_i=z_{u_i}\). Let \(\mathrm{pos}(u_i)=i\). We then construct a boolean attention mask \(\mathbf{A} \in \{0,1\}^{n \times (t+n)}\) such that each drafted token attends to: (i) all prefix tokens \(x_{1:t}\), and (ii) only its ancestors (including itself) among drafted nodes:
 \[
 \mathbf{A}_{i,j} =
 \begin{cases}
 1, & 1 \le j \le t,\\
-1, & j=t+\mathrm{pos}(v) \text{ for some ancestor } v \in \mathrm{Anc}(u_i)\cup\{u_i\},\\
+1, & j=t+\mathrm{pos}(v) \text{ for some } v \in \mathrm{Anc}(u_i)\cup\{u_i\},\\
 0, & \text{otherwise.}
 \end{cases}
 \]
