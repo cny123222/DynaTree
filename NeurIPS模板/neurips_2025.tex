@@ -371,6 +371,13 @@ Fixed Tree (\(D_0=5,B=2\)) & 188.0\(\pm\)16.5 & 1.42\(\times\) & 0.0\% \\
   \end{tabular}
 \end{table}
 
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.92\linewidth]{../figures/ablation_progression.pdf}
+  \caption{\textbf{Ablation progression on WikiText-2 (\(T=1500\)).} Adding Dynamic Breadth \& Depth increases throughput and reduces the number of verification iterations; History Adaptation further improves throughput and reduces iterations by committing longer prefixes per step.}
+  \label{fig:ablation-progression}
+\end{figure}
+
 \subsection{Sequence Length Scaling}
 \label{sec:length-scaling}
 We evaluate how throughput varies with generation length \(T\) on WikiText-2, comparing autoregressive decoding, linear speculative decoding, a fixed tree configuration, and DynaTree. Figure~\ref{fig:length-scaling} summarizes the throughput trends across \(T\).
