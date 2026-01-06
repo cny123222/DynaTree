@@ -4,7 +4,9 @@ Plot progressive ablation (Fixed Tree -> + Dynamic Breadth & Depth -> + History 
 using the paper's main benchmark JSON (WikiText-2, T=1500).
 
 Goal: a compact, multi-metric figure (SpecInfer-style) that explains *why* throughput improves.
-We render a 1x2 layout (two panels side-by-side) to avoid sparse small multiples.
+We render a 1x2 layout (two panels side-by-side), with **two metrics per panel**:
+  - Left: Throughput (bars) + #Iter (line, separate y-axis)
+  - Right: tokens/iter (line) + Accept.(%) (line, separate y-axis)
 """
 
 import json
@@ -65,53 +67,77 @@ def main() -> None:
         phase3.get("acceptance_rate", 0.0),
     ]
 
-    fig, axes = plt.subplots(1, 2, figsize=(10.2, 3.8))
+    fig, axes = plt.subplots(1, 2, figsize=(10.4, 3.8))
 
     colors = ["#6FAF8A", "#8BACC6", "#D97757"]  # fixed, phase2, phase3 (history highlighted)
     edge = "#333333"
 
-    # (a) Throughput + speedup (annotation)
+    # (a) Throughput (bars) + #Iter (line, twin y-axis)
     ax = axes[0]
-    bars = ax.bar(x, throughput, color=colors, edgecolor=edge, linewidth=0.6, alpha=0.92)
-    ax.set_title("(a) Throughput", fontsize=11, pad=8)
-    ax.set_ylabel("Tokens / second", fontsize=11)
+    bars = ax.bar(x, throughput, color=colors, edgecolor=edge, linewidth=0.6, alpha=0.92, label="Throughput")
+    ax.set_title("(a) Throughput vs. iterations", fontsize=11, pad=8)
+    ax.set_ylabel("Throughput (tokens/s)", fontsize=11)
     ax.set_xticks(x)
     ax.set_xticklabels(labels, fontsize=9)
     ax.grid(axis="y", linestyle=":", alpha=0.35, linewidth=0.6)
-    ymax = max(throughput) * 1.18
-    ax.set_ylim(0, ymax)
+    ax.set_ylim(0, max(throughput) * 1.22)
+
+    # Keep minimal bar labels (throughput + speedup); no line value labels per request.
     for b, tps, sp in zip(bars, throughput, speedup):
         ax.text(
             b.get_x() + b.get_width() / 2,
-            b.get_height() + ymax * 0.02,
-            f"{tps:.1f}\n({sp:.2f}×)",
+            b.get_height() + max(throughput) * 0.01,
+            f"{tps:.1f} ({sp:.2f}×)",
             ha="center",
             va="bottom",
             fontsize=9,
         )
 
-    # (b) Efficiency summary: #Iter (bars) + tokens/iter and acceptance (lines, twin axis)
-    ax = axes[1]
-    bars = ax.bar(x, rounds, color=colors, edgecolor=edge, linewidth=0.6, alpha=0.35, label="#Iter.")
-    ax.set_title("(b) Verification efficiency", fontsize=11, pad=8)
-    ax.set_ylabel("#Iter.", fontsize=11)
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=9)
-    ax.grid(axis="y", linestyle=":", alpha=0.35, linewidth=0.6)
-    ax.set_ylim(0, max(rounds) * 1.18)
+    ax_it = ax.twinx()
+    ax_it.plot(
+        x,
+        rounds,
+        marker="o",
+        linewidth=2.0,
+        markersize=7,
+        color="#4A708B",
+        label="#Iter.",
+        alpha=0.95,
+    )
+    ax_it.set_ylabel("#Iter.", fontsize=11, color="#4A708B")
+    ax_it.tick_params(axis="y", labelcolor="#4A708B")
+    rmin, rmax = min(rounds), max(rounds)
+    pad = max(3, int((rmax - rmin) * 0.2))
+    ax_it.set_ylim(rmin - pad, rmax + pad)
 
-    ax2 = ax.twinx()
-    ax2.plot(
+    # Combined legend (no duplicate boxes)
+    h1, l1 = ax.get_legend_handles_labels()
+    h2, l2 = ax_it.get_legend_handles_labels()
+    ax.legend(h1 + h2, l1 + l2, loc="upper left", frameon=True, framealpha=0.95, edgecolor="#999999", fontsize=9)
+
+    # (b) Per-iteration progress: tokens/iter (left y) + Accept.(%) (right y)
+    ax = axes[1]
+    ax.set_title(r"(b) Progress per iteration", fontsize=11, pad=8)
+    ax.plot(
         x,
         tokens_per_iter,
         marker="D",
-        linewidth=2.0,
+        linewidth=2.2,
         markersize=7,
         color="#D97757",
-        label=r"$\bar{L}$ (tok/iter)",
+        label=r"$\bar{L}$ (tokens/iter)",
         alpha=0.95,
     )
-    ax2.plot(
+    ax.set_ylabel(r"$\bar{L}$ (tokens/iter)", fontsize=11, color="#D97757")
+    ax.tick_params(axis="y", labelcolor="#D97757")
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=9)
+    ax.grid(True, linestyle=":", alpha=0.35, linewidth=0.6)
+    lmin, lmax = min(tokens_per_iter), max(tokens_per_iter)
+    ax.set_ylim(lmin - 0.3, lmax + 0.5)
+
+    ax_acc = ax.twinx()
+    ax_acc.plot(
         x,
         [a * 100 for a in accept],
         marker="s",
@@ -122,13 +148,16 @@ def main() -> None:
         label="Accept. (%)",
         alpha=0.95,
     )
-    ax2.set_ylabel(r"$\bar{L}$ / Accept.", fontsize=11)
-    ax2.set_ylim(0, max(max(tokens_per_iter) * 1.25, max([a * 100 for a in accept]) * 1.10))
+    ax_acc.set_ylabel("Accept. (%)", fontsize=11, color="#4A708B")
+    ax_acc.tick_params(axis="y", labelcolor="#4A708B")
+    amin, amax = min([a * 100 for a in accept]), max([a * 100 for a in accept])
+    # Tight range so acceptance is visible (do NOT share scale with length).
+    ax_acc.set_ylim(max(0, amin - 8), min(110, amax + 8))
 
-    # Legend combining both axes (no numeric labels on the lines, per paper style request)
+    # Combined legend
     h1, l1 = ax.get_legend_handles_labels()
-    h2, l2 = ax2.get_legend_handles_labels()
-    ax2.legend(h1 + h2, l1 + l2, loc="upper right", frameon=True, framealpha=0.95, edgecolor="#999999", fontsize=9)
+    h2, l2 = ax_acc.get_legend_handles_labels()
+    ax.legend(h1 + h2, l1 + l2, loc="lower right", frameon=True, framealpha=0.95, edgecolor="#999999", fontsize=9)
 
     plt.tight_layout()
 
