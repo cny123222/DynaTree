@@ -51,6 +51,7 @@
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage[hypertexnames=false]{hyperref}       % hyperlinks (avoid duplicate destination warnings)
+\usepackage{placeins}       % \FloatBarrier to keep floats out of references
 \usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
 \usepackage{multirow}       % multirow cells in tables
@@ -403,6 +404,7 @@ We place supplementary parameter sensitivity analyses in Appendix~\ref{app:addit
 \section{Conclusion}
 We presented DynaTree, a greedy-consistent tree-based speculative decoding method that drafts a candidate token tree with a lightweight model and verifies all nodes in a single target-model pass using a structured attention mask. DynaTree adaptively allocates the verification budget via dynamic breadth and depth control and stabilizes the configuration through history-based adjustment. Across WikiText-2 and PG-19 at \(T=1500\), DynaTree improves throughput and reduces per-token latency relative to autoregressive decoding, linear speculative decoding, and a fixed-tree baseline by committing longer greedy-consistent prefixes per verification step. Future work includes evaluating broader serving regimes (e.g., longer contexts, different prompt lengths and batch sizes) and reducing system overhead via kernel-level optimizations and hardware-aware tree construction.
 
+\FloatBarrier % ensure all floats are placed before references
 \bibliographystyle{unsrtnat}
 \bibliography{references}
 
