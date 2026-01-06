@@ -298,6 +298,13 @@ Fixed Tree (\(D=5,B=2\)) & 188.0\(\pm\)16.5 & 1.42\(\times\) & 183.7\(\pm\)24.8 
 \end{tabular}
 \end{table}
 
+\begin{figure}[tbp]
+  \centering
+  \includegraphics[width=0.80\linewidth]{../figures/main_results_bars.pdf}
+  \caption{\textbf{Throughput and speedup across datasets (\(T=1500\)).} Each method is shown with two bars (WikiText-2 vs.\ PG-19). DynaTree consistently improves over autoregressive and linear speculative decoding on both datasets.}
+  \label{fig:main-results}
+\end{figure}
+
 Figure~\ref{fig:main-results} visualizes throughput and speedup. Linear speculative decoding can attain high acceptance when the draft closely matches the target; however, a mismatch truncates the reusable prefix and wastes the remaining drafted tokens in the chain. Tree-based drafting mitigates this failure mode by exploring multiple continuations in parallel and committing the longest greedy-consistent prefix. DynaTree further concentrates the node budget on high-confidence regions while limiting expansion in uncertain regions, improving throughput across both datasets.
 
 \paragraph{Latency breakdown analysis.}
@@ -344,13 +351,6 @@ Fixed Tree (\(D=5,B=2\)) & 82.6\% & 5.75 & 5.78 & 261 & 82.9\% & 5.75 & 5.80 & 2
 \bottomrule
 \end{tabular}
 \end{table}
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.85\linewidth]{../figures/main_results_bars.pdf}
-  \caption{\textbf{Throughput and speedup across datasets (\(T=1500\)).} Each method is shown with two bars (WikiText-2 vs.\ PG-19). DynaTree consistently improves over autoregressive and linear speculative decoding on both datasets.}
-  \label{fig:main-results}
-\end{figure}
 
 \paragraph{Discussion.}
 Two trends help explain the observed speedups. First, compared with linear drafting, tree-based methods are less sensitive to early mismatches: when the draft model diverges, alternative branches can still contain a greedy-consistent continuation, which increases the expected committed prefix length per verification step. Second, compared with a fixed tree, DynaTree allocates more of the node budget to regions where the draft model is confident while curtailing wasteful expansion in uncertain regions. This adaptivity improves verification efficiency (Table~\ref{tab:verification-efficiency}) and translates into higher end-to-end throughput (Table~\ref{tab:main-results}).
