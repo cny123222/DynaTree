@@ -4,6 +4,7 @@ Plot progressive ablation (Fixed Tree -> + Dynamic Breadth & Depth -> + History 
 using the paper's main benchmark JSON (WikiText-2, T=1500).
 
 Goal: a compact, multi-metric figure (SpecInfer-style) that explains *why* throughput improves.
+We render a 1x2 layout (two panels side-by-side) to avoid sparse small multiples.
 """
 
 import json
@@ -64,8 +65,7 @@ def main() -> None:
         phase3.get("acceptance_rate", 0.0),
     ]
 
-    fig, axes = plt.subplots(2, 2, figsize=(9.6, 6.0))
-    axes = axes.flatten()
+    fig, axes = plt.subplots(1, 2, figsize=(10.2, 3.8))
 
     colors = ["#6FAF8A", "#8BACC6", "#D97757"]  # fixed, phase2, phase3 (history highlighted)
     edge = "#333333"
@@ -90,51 +90,45 @@ def main() -> None:
             fontsize=9,
         )
 
-    # (b) Verification iterations (#Iter)
+    # (b) Efficiency summary: #Iter (bars) + tokens/iter and acceptance (lines, twin axis)
     ax = axes[1]
-    bars = ax.bar(x, rounds, color=colors, edgecolor=edge, linewidth=0.6, alpha=0.92)
-    ax.set_title("(b) Verification iterations", fontsize=11, pad=8)
+    bars = ax.bar(x, rounds, color=colors, edgecolor=edge, linewidth=0.6, alpha=0.35, label="#Iter.")
+    ax.set_title("(b) Verification efficiency", fontsize=11, pad=8)
     ax.set_ylabel("#Iter.", fontsize=11)
     ax.set_xticks(x)
     ax.set_xticklabels(labels, fontsize=9)
     ax.grid(axis="y", linestyle=":", alpha=0.35, linewidth=0.6)
-    ymax = max(rounds) * 1.15
-    ax.set_ylim(0, ymax)
-    for b, v in zip(bars, rounds):
-        ax.text(
-            b.get_x() + b.get_width() / 2,
-            b.get_height() + ymax * 0.02,
-            f"{int(v)}",
-            ha="center",
-            va="bottom",
-            fontsize=9,
-        )
+    ax.set_ylim(0, max(rounds) * 1.18)
 
-    # (c) Per-iteration progress (tokens/iter and avg path length)
-    ax = axes[2]
-    ax.set_title(r"(c) Per-iteration progress", fontsize=11, pad=8)
-    ax.plot(x, tokens_per_iter, marker="D", linewidth=2.0, markersize=7, color="#D97757", label=r"$\bar{L}$ (tokens/iter)", alpha=0.95)
-    ax.plot(x, avg_path_len, marker="o", linewidth=2.0, markersize=7, color="#4A708B", label=r"$\bar{\ell}$ (avg path length)", alpha=0.95)
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=9)
-    ax.set_ylabel("Value", fontsize=11)
-    ax.grid(True, linestyle=":", alpha=0.35, linewidth=0.6)
-    ax.legend(loc="lower right", frameon=True, framealpha=0.95, edgecolor="#999999", fontsize=9)
-    for xi, lbar, ell in zip(x, tokens_per_iter, avg_path_len):
-        ax.text(xi, lbar + 0.05, f"{lbar:.2f}", ha="center", va="bottom", fontsize=9, color="#D97757")
-        ax.text(xi, ell - 0.12, f"{ell:.2f}", ha="center", va="top", fontsize=9, color="#4A708B")
+    ax2 = ax.twinx()
+    ax2.plot(
+        x,
+        tokens_per_iter,
+        marker="D",
+        linewidth=2.0,
+        markersize=7,
+        color="#D97757",
+        label=r"$\bar{L}$ (tok/iter)",
+        alpha=0.95,
+    )
+    ax2.plot(
+        x,
+        [a * 100 for a in accept],
+        marker="s",
+        linewidth=2.0,
+        markersize=7,
+        color="#4A708B",
+        linestyle="--",
+        label="Accept. (%)",
+        alpha=0.95,
+    )
+    ax2.set_ylabel(r"$\bar{L}$ / Accept.", fontsize=11)
+    ax2.set_ylim(0, max(max(tokens_per_iter) * 1.25, max([a * 100 for a in accept]) * 1.10))
 
-    # (d) Acceptance rate
-    ax = axes[3]
-    ax.set_title(r"(d) Acceptance rate", fontsize=11, pad=8)
-    ax.plot(x, [a * 100 for a in accept], marker="s", linewidth=2.0, markersize=7, color="#6FAF8A", alpha=0.95)
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=9)
-    ax.set_ylabel("Accept. (%)", fontsize=11)
-    ax.grid(True, linestyle=":", alpha=0.35, linewidth=0.6)
-    ax.set_ylim(0, max([a * 100 for a in accept]) * 1.10)
-    for xi, a in zip(x, accept):
-        ax.text(xi, a * 100 + 0.8, f"{a * 100:.1f}%", ha="center", va="bottom", fontsize=9)
+    # Legend combining both axes (no numeric labels on the lines, per paper style request)
+    h1, l1 = ax.get_legend_handles_labels()
+    h2, l2 = ax2.get_legend_handles_labels()
+    ax2.legend(h1 + h2, l1 + l2, loc="upper right", frameon=True, framealpha=0.95, edgecolor="#999999", fontsize=9)
 
     plt.tight_layout()
 
