@@ -444,6 +444,16 @@ AR & 133.5\(\pm\)0.6 & 1.00\(\times\) & 0.0\% \\
 \end{tabular}
 \end{table}
 
+\subsection{Prompt Length Sensitivity}
+We evaluate the impact of input context length by varying the maximum prompt length \(L_{\max}\) on WikiText-2 under the same \(T=1500\) generation setting as the main benchmark. Figure~\ref{fig:prompt-length-sensitivity} reports throughput and speedup as functions of \(L_{\max}\), illustrating how speculative decoding performance changes as prefill cost increases.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{../figures/prompt_length_sensitivity.pdf}
+  \caption{\textbf{Prompt length sensitivity on WikiText-2 (\(T=1500\)).} Throughput and speedup (relative to AR at the same \(L_{\max}\)) as functions of the maximum prompt length.}
+  \label{fig:prompt-length-sensitivity}
+\end{figure}
+
 \section{Memory Footprint Analysis}
 \label{app:memory}
 An important practical consideration for speculative decoding methods is their memory overhead. Table~\ref{tab:memory-footprint} reports peak GPU memory consumption across methods on PG-19 and WikiText-2 during the \(T=1500\) main benchmark. Overall, speculative decoding introduces a modest additional peak allocation (about 3\% on average in this setup) to maintain the draft-model KV cache and intermediate verification structures.
