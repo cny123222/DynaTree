@@ -3,7 +3,7 @@
 Parameter sensitivity visualization for DynaTree (WikiText-2).
 
 Data source:
-  results/adaptive/sensitivity/paper_benchmark_sensitivity_v2.json
+  results/adaptive/sensitivity/paper_benchmark_sensitivity_1500tokens.json
 
 We visualize the effect of:
   - confidence thresholds (tau_h, tau_l)
@@ -31,7 +31,7 @@ plt.rcParams["font.size"] = 10
 
 
 def main() -> None:
-    src = Path("results/adaptive/sensitivity/paper_benchmark_sensitivity_v2.json")
+    src = Path("results/adaptive/sensitivity/paper_benchmark_sensitivity_1500tokens.json")
     data = json.loads(src.read_text())
 
     ar = next(r for r in data["all_results"] if r.get("method") == "Baseline (AR)")
