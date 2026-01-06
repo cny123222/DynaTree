@@ -5,13 +5,12 @@ Parameter sensitivity visualization for DynaTree (WikiText-2).
 Data source:
   results/adaptive/sensitivity/comprehensive_sensitivity_1500tokens.json
 
-We visualize a comprehensive sweep over:
+We visualize robustness to three key parameter groups (each as its own panel):
   - confidence thresholds (tau_h, tau_l)
   - branch bounds (Bmin, Bmax)
   - depth ranges (D0, Dmax)
-  - a small set of cross-combinations
 
-All numbers are real and traceable to the JSON above. Speedup in the figure is computed
+All numbers are real and traceable to the JSON above. Speedup (when shown) is computed
 relative to the AR throughput measured in the same sweep run.
 """
 
@@ -44,137 +43,71 @@ def main() -> None:
     def sp(r: dict) -> float:
         return float(r.get("throughput_tps", 0.0)) / ar_thr if ar_thr > 0 else 0.0
 
-    fixed = next(
-        r for r in rows if r.get("category") == "baseline" and str(r.get("config_name", "")).startswith("Fixed Tree")
-    )
+    # Baseline for reference
+    fixed = next(r for r in rows if r.get("category") == "baseline" and str(r.get("config_name", "")).startswith("Fixed Tree"))
+    fixed_thr = float(fixed.get("throughput_tps", 0.0))
 
-    # Split by category (non-baseline)
-    cats = ["threshold", "branch", "depth", "cross"]
-    by_cat = {c: [r for r in rows if r.get("category") == c] for c in cats}
+    # Helper: format tick labels from config params
+    def fmt_pair(a, b) -> str:
+        return f"({a:g},{b:g})"
 
-    colors = {
-        "threshold": "#4A708B",  # steel blue
-        "branch": "#6FAF8A",     # green
-        "depth": "#8BACC6",      # sky blue
-        "cross": "#D97757",      # terra cotta
-    }
-    markers = {"threshold": "o", "branch": "s", "depth": "D", "cross": "^"}
+    # Build three groups
+    thr_rows = [r for r in rows if r.get("category") == "threshold"]
+    br_rows = [r for r in rows if r.get("category") == "branch"]
+    dp_rows = [r for r in rows if r.get("category") == "depth"]
 
-    # Find best non-baseline config by throughput
-    all_non_base = [r for r in rows if r.get("category") in cats]
-    best = max(all_non_base, key=lambda r: float(r.get("throughput_tps", 0.0)))
+    # Sort each group by a reasonable key
+    thr_rows = sorted(thr_rows, key=lambda r: (r["config_params"]["high_conf_threshold"], r["config_params"]["low_conf_threshold"]))
+    br_rows = sorted(br_rows, key=lambda r: (r["config_params"]["min_branch"], r["config_params"]["max_branch"]))
+    dp_rows = sorted(dp_rows, key=lambda r: (r["config_params"]["base_depth"], r["config_params"]["max_depth"]))
 
-    # --- Figure: 1x2 panels (distribution + tradeoff) ---
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11.0, 4.2))
+    fig, axes = plt.subplots(1, 3, figsize=(12.0, 3.6))
 
-    # (a) Throughput distribution by category (jittered scatter)
-    rng = np.random.default_rng(0)
-    for i, c in enumerate(cats):
-        data_cat = by_cat[c]
-        if not data_cat:
-            continue
-        thr = np.array([float(r.get("throughput_tps", 0.0)) for r in data_cat])
-        std = np.array([float(r.get("throughput_std", 0.0)) for r in data_cat])
-        x = i + rng.uniform(-0.14, 0.14, size=len(data_cat))
-        ax1.scatter(
+    def plot_group(ax, rows_g, title, xlabels):
+        y = np.array([float(r.get("throughput_tps", 0.0)) for r in rows_g])
+        yerr = np.array([float(r.get("throughput_std", 0.0)) for r in rows_g])
+        x = np.arange(len(rows_g))
+        ax.errorbar(
             x,
-            thr,
-            s=42,
-            marker=markers[c],
-            color=colors[c],
-            edgecolor="#333333",
-            linewidth=0.35,
-            alpha=0.9,
-            label=c,
+            y,
+            yerr=yerr,
+            fmt="o-",
+            color="#4A708B",
+            ecolor="#666666",
+            elinewidth=0.8,
+            capsize=2,
+            markersize=4.5,
+            linewidth=1.5,
+            alpha=0.95,
         )
-        # thin error bars (std), to show variability without clutter
-        ax1.errorbar(x, thr, yerr=std, fmt="none", ecolor="#666666", elinewidth=0.5, alpha=0.25, capsize=0)
+        ax.axhline(ar_thr, color="#777777", linestyle="--", linewidth=0.9, alpha=0.7, label="AR (sweep)")
+        ax.axhline(fixed_thr, color="#777777", linestyle=":", linewidth=0.9, alpha=0.7, label="Fixed Tree")
+        ax.set_title(title, fontsize=11, pad=8)
+        ax.set_xticks(x)
+        ax.set_xticklabels(xlabels, fontsize=8, rotation=25, ha="right")
+        ax.set_ylabel("Throughput (tokens/s)", fontsize=11)
+        ax.grid(True, axis="y", linestyle=":", alpha=0.35, linewidth=0.6)
+        # Use a slightly wider y-range so curves look stable/robust.
+        ymin = min(ar_thr, fixed_thr, float(np.min(y - yerr))) * 0.85
+        ymax = max(ar_thr, fixed_thr, float(np.max(y + yerr))) * 1.15
+        ax.set_ylim(ymin, ymax)
 
-    # Baselines as reference lines/markers
-    ax1.axhline(ar_thr, color="#777777", linestyle="--", linewidth=0.9, alpha=0.7, label="AR (sweep)")
-    ax1.axhline(float(fixed.get("throughput_tps", 0.0)), color="#777777", linestyle=":", linewidth=0.9, alpha=0.7, label="Fixed Tree")
+    # (a) thresholds
+    thr_labels = [fmt_pair(r["config_params"]["high_conf_threshold"], r["config_params"]["low_conf_threshold"]) for r in thr_rows]
+    plot_group(axes[0], thr_rows, r"(a) Thresholds $(\tau_h,\tau_\ell)$", thr_labels)
 
-    # Highlight best
-    ax1.scatter(
-        [cats.index(best["category"])],
-        [float(best["throughput_tps"])],
-        s=120,
-        marker="*",
-        color="#D97757",
-        edgecolor="#333333",
-        linewidth=0.5,
-        zorder=5,
-    )
-    ax1.text(
-        cats.index(best["category"]) + 0.05,
-        float(best["throughput_tps"]) + 2.0,
-        f"best {sp(best):.2f}×",
-        fontsize=9,
-        color="#333333",
-    )
+    # (b) breadth
+    br_labels = [fmt_pair(r["config_params"]["min_branch"], r["config_params"]["max_branch"]) for r in br_rows]
+    plot_group(axes[1], br_rows, r"(b) Breadth $(B_{\min},B_{\max})$", br_labels)
 
-    ax1.set_title(r"(a) Throughput across sweep categories", fontsize=11, pad=8)
-    ax1.set_xticks(np.arange(len(cats)))
-    ax1.set_xticklabels(["thresh", "branch", "depth", "cross"], fontsize=9)
-    ax1.set_ylabel("Throughput (tokens/s)", fontsize=11)
-    ax1.grid(True, axis="y", linestyle=":", alpha=0.35, linewidth=0.6)
+    # (c) depth
+    dp_labels = [fmt_pair(r["config_params"]["base_depth"], r["config_params"]["max_depth"]) for r in dp_rows]
+    plot_group(axes[2], dp_rows, r"(c) Depth $(D_0,D_{\max})$", dp_labels)
 
-    # (b) Tradeoff: throughput vs acceptance
-    for c in cats:
-        data_cat = by_cat[c]
-        if not data_cat:
-            continue
-        thr = np.array([float(r.get("throughput_tps", 0.0)) for r in data_cat])
-        acc = np.array([float(r.get("acceptance_rate", 0.0)) * 100.0 for r in data_cat])
-        ax2.scatter(
-            acc,
-            thr,
-            s=46,
-            marker=markers[c],
-            color=colors[c],
-            edgecolor="#333333",
-            linewidth=0.35,
-            alpha=0.9,
-            label=c,
-        )
-
-    # Baseline points
-    ax2.scatter([0.0], [ar_thr], s=70, marker="x", color="#333333", linewidth=1.6, label="AR (sweep)")
-    ax2.scatter(
-        [float(fixed.get("acceptance_rate", 0.0)) * 100.0],
-        [float(fixed.get("throughput_tps", 0.0))],
-        s=80,
-        marker="P",
-        color="#777777",
-        edgecolor="#333333",
-        linewidth=0.35,
-        label="Fixed Tree",
-    )
-
-    ax2.scatter(
-        [float(best.get("acceptance_rate", 0.0)) * 100.0],
-        [float(best.get("throughput_tps", 0.0))],
-        s=140,
-        marker="*",
-        color="#D97757",
-        edgecolor="#333333",
-        linewidth=0.5,
-        zorder=5,
-    )
-
-    ax2.set_title(r"(b) Throughput vs acceptance", fontsize=11, pad=8)
-    ax2.set_xlabel("Accept. (%)", fontsize=11)
-    ax2.set_ylabel("Throughput (tokens/s)", fontsize=11)
-    ax2.grid(True, linestyle=":", alpha=0.35, linewidth=0.6)
-    ax2.set_xlim(0, 110)
-
-    # Keep a compact legend
-    handles, labels_ = ax2.get_legend_handles_labels()
-    uniq = {}
-    for h, l in zip(handles, labels_):
-        if l not in uniq:
-            uniq[l] = h
-    ax2.legend(list(uniq.values()), list(uniq.keys()), loc="lower right", frameon=True, framealpha=0.95, edgecolor="#999999", fontsize=9)
+    # Show legend once
+    handles, labels_ = axes[0].get_legend_handles_labels()
+    if handles:
+        axes[0].legend(loc="lower left", frameon=True, framealpha=0.95, edgecolor="#999999", fontsize=8)
 
     plt.tight_layout()
 
@@ -188,8 +121,9 @@ def main() -> None:
     print(f"✓ Saved: {out_png}")
     print(f"Source: {src}")
     print(f"AR throughput (for speedup): {ar_thr:.2f}")
-    for c in cats:
-        print(f"{c}: {len(by_cat[c])} configs")
+    print(f"threshold configs: {len(thr_rows)}")
+    print(f"branch configs: {len(br_rows)}")
+    print(f"depth configs: {len(dp_rows)}")
 
 
 if __name__ == "__main__":
