@@ -276,7 +276,7 @@ We compare the proposed confidence-aware adaptive decoding against the following
 
 \subsection{Main Results}
 \label{main-results}
-Table~\ref{tab:main-results} reports end-to-end throughput on WikiText-2 and PG-19 for \(T=1500\) token generation. Across both datasets, DynaTree yields the highest throughput and improves over both autoregressive decoding and linear speculative decoding. Compared with a fixed tree, DynaTree provides an additional gain on both datasets (e.g., 218.1~t/s vs.\ 188.6~t/s on WikiText-2), indicating that adapting the draft structure to local model uncertainty improves the draft--verify trade-off beyond a static configuration.
+Table~\ref{tab:main-results} reports end-to-end throughput on WikiText-2 and PG-19 for \(T=1500\) token generation. Across both datasets, DynaTree yields the highest throughput and improves over both autoregressive decoding and linear speculative decoding. Compared with a fixed tree, DynaTree provides an additional gain on both datasets (e.g., 218.5~t/s vs.\ 188.0~t/s on WikiText-2), indicating that adapting the draft structure to local model uncertainty improves the draft--verify trade-off beyond a static configuration.
 
 \begin{table}[t]
 \centering
@@ -289,10 +289,10 @@ Method & \multicolumn{2}{c}{WikiText-2} & \multicolumn{2}{c}{PG-19} \\
 \cmidrule(lr){2-3} \cmidrule(lr){4-5}
 & Throughput (t/s) & Speedup & Throughput (t/s) & Speedup \\
 \midrule
-AR & 135.2\(\pm\)0.6 & 1.00\(\times\) & 133.7\(\pm\)0.7 & 1.00\(\times\) \\
-Linear Spec (\(K=5\)) & 163.2\(\pm\)26.0 & 1.21\(\times\) & 154.1\(\pm\)25.4 & 1.15\(\times\) \\
-Fixed Tree (\(D=5,B=2\)) & 188.6\(\pm\)16.7 & 1.39\(\times\) & 183.7\(\pm\)24.8 & 1.37\(\times\) \\
-\textbf{DynaTree} & \textbf{218.1\(\pm\)21.6} & \textbf{1.61\(\times\)} & \textbf{192.1\(\pm\)34.2} & \textbf{1.44\(\times\)} \\
+AR & 132.8\(\pm\)0.7 & 1.00\(\times\) & 133.7\(\pm\)0.7 & 1.00\(\times\) \\
+Linear Spec (\(K=5\)) & 169.1\(\pm\)19.1 & 1.27\(\times\) & 154.1\(\pm\)25.4 & 1.15\(\times\) \\
+Fixed Tree (\(D=5,B=2\)) & 188.0\(\pm\)16.5 & 1.42\(\times\) & 183.7\(\pm\)24.8 & 1.37\(\times\) \\
+\textbf{DynaTree} & \textbf{218.5\(\pm\)22.2} & \textbf{1.65\(\times\)} & \textbf{192.1\(\pm\)34.2} & \textbf{1.44\(\times\)} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -313,10 +313,10 @@ Method & \multicolumn{2}{c}{WikiText-2} & \multicolumn{2}{c}{PG-19} \\
 \cmidrule(lr){2-3} \cmidrule(lr){4-5}
 & TTFT (ms) & TPOT (ms) & TTFT (ms) & TPOT (ms) \\
 \midrule
-AR & 23.2\(\pm\)14.8 & 7.38\(\pm\)0.03 & 20.0\(\pm\)4.5 & 7.46\(\pm\)0.04 \\
-Linear Spec (\(K=5\)) & 15.7\(\pm\)4.8 & 6.28\(\pm\)1.06 & 10.5\(\pm\)1.9 & 6.71\(\pm\)1.42 \\
-Fixed Tree (\(D=5,B=2\)) & 14.9\(\pm\)3.9 & 5.34\(\pm\)0.51 & 10.4\(\pm\)0.4 & 5.54\(\pm\)0.75 \\
-\textbf{DynaTree} & 19.4\(\pm\)16.2 & \textbf{4.62\(\pm\)0.46} & 9.9\(\pm\)0.6 & \textbf{5.38\(\pm\)1.03} \\
+AR & 18.9\(\pm\)6.1 & 7.52\(\pm\)0.04 & 20.0\(\pm\)4.5 & 7.46\(\pm\)0.04 \\
+Linear Spec (\(K=5\)) & 14.9\(\pm\)4.0 & 5.98\(\pm\)0.65 & 10.5\(\pm\)1.9 & 6.71\(\pm\)1.42 \\
+Fixed Tree (\(D=5,B=2\)) & 15.0\(\pm\)3.9 & 5.35\(\pm\)0.50 & 10.4\(\pm\)0.4 & 5.54\(\pm\)0.75 \\
+\textbf{DynaTree} & 14.6\(\pm\)4.1 & \textbf{4.61\(\pm\)0.47} & 9.9\(\pm\)0.6 & \textbf{5.38\(\pm\)1.03} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -341,16 +341,16 @@ We provide a progressive ablation on WikiText-2 under the same \(T=1500\) settin
     \toprule
 Variant & Throughput (t/s) & Speedup & \(\Delta\) vs Fixed \\
     \midrule
-Fixed Tree (\(D_0=5,B=2\)) & 188.6\(\pm\)16.7 & 1.39\(\times\) & 0.0\% \\
-+ Dynamic Breadth \& Depth & 213.7\(\pm\)26.0 & 1.58\(\times\) & +13.3\% \\
-\textbf{+ History Adaptation} & \textbf{218.1\(\pm\)21.6} & \textbf{1.61\(\times\)} & \textbf{+15.6\%} \\
+Fixed Tree (\(D_0=5,B=2\)) & 188.0\(\pm\)16.5 & 1.42\(\times\) & 0.0\% \\
++ Dynamic Breadth \& Depth & 213.2\(\pm\)26.1 & 1.61\(\times\) & +13.4\% \\
+\textbf{+ History Adaptation} & \textbf{218.5\(\pm\)22.2} & \textbf{1.65\(\times\)} & \textbf{+16.2\%} \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \subsection{Sequence Length Scaling}
 \label{sec:length-scaling}
-We evaluate how throughput varies with generation length \(T\) on WikiText-2, comparing autoregressive decoding, linear speculative decoding, a fixed tree configuration, and DynaTree. Table~\ref{tab:length-scaling} reports throughput for each \(T\), along with the DynaTree speedup relative to autoregressive decoding. For \(T=1500\), we report the same measurements as in the main benchmark (Table~\ref{tab:main-results}) to ensure consistency.
+We evaluate how throughput varies with generation length \(T\) on WikiText-2, comparing autoregressive decoding, linear speculative decoding, a fixed tree configuration, and DynaTree. Table~\ref{tab:length-scaling} reports throughput for each \(T\), along with the DynaTree speedup relative to autoregressive decoding.
 
 \begin{figure}[t]
   \centering
@@ -369,13 +369,14 @@ We evaluate how throughput varies with generation length \(T\) on WikiText-2, co
 \toprule
 \(T\) & AR (t/s) & Linear (t/s) & Fixed Tree (t/s) & DynaTree (t/s) & Speedup \\
 \midrule
-100  & \textbf{128.8\(\pm\)1.5} & 94.0\(\pm\)27.6 & 112.5\(\pm\)29.6 & 114.3\(\pm\)34.2 & 0.89\(\times\) \\
-200  & 131.5\(\pm\)1.1 & 119.4\(\pm\)26.4 & 140.1\(\pm\)28.0 & \textbf{143.0\(\pm\)34.6} & 1.09\(\times\) \\
-300  & 131.8\(\pm\)0.6 & 136.8\(\pm\)24.7 & 158.2\(\pm\)26.7 & \textbf{163.8\(\pm\)31.4} & 1.24\(\times\) \\
-500  & 127.2\(\pm\)10.0 & 152.3\(\pm\)23.1 & 177.9\(\pm\)21.9 & \textbf{188.2\(\pm\)32.4} & 1.48\(\times\) \\
-750  & 132.9\(\pm\)0.9 & 161.3\(\pm\)22.9 & 185.6\(\pm\)13.9 & \textbf{202.8\(\pm\)29.8} & 1.53\(\times\) \\
-1000 & 132.9\(\pm\)0.9 & 167.7\(\pm\)21.4 & 190.9\(\pm\)13.6 & \textbf{211.9\(\pm\)26.9} & 1.59\(\times\) \\
-1500 & 135.2\(\pm\)0.6 & 163.2\(\pm\)26.0 & 188.6\(\pm\)16.7 & \textbf{218.1\(\pm\)21.6} & 1.61\(\times\) \\
+100  & 83.3\(\pm\)27.7 & 94.3\(\pm\)27.7 & 103.5\(\pm\)39.2 & \textbf{116.6\(\pm\)35.6} & 1.40\(\times\) \\
+200  & 110.1\(\pm\)27.8 & 117.7\(\pm\)26.4 & 139.4\(\pm\)28.3 & \textbf{142.0\(\pm\)34.6} & 1.29\(\times\) \\
+300  & 131.9\(\pm\)0.7 & 134.6\(\pm\)25.3 & \textbf{158.3\(\pm\)27.2} & 144.7\(\pm\)48.7 & 1.10\(\times\) \\
+500  & 123.9\(\pm\)18.0 & 148.0\(\pm\)23.4 & 158.1\(\pm\)37.4 & \textbf{185.8\(\pm\)32.0} & 1.50\(\times\) \\
+1000 & 136.5\(\pm\)0.6 & 166.4\(\pm\)22.6 & 192.4\(\pm\)13.0 & \textbf{215.4\(\pm\)26.5} & 1.58\(\times\) \\
+1200 & 128.8\(\pm\)12.4 & 168.3\(\pm\)20.9 & 169.2\(\pm\)31.5 & \textbf{218.4\(\pm\)24.8} & 1.70\(\times\) \\
+1500 & 132.8\(\pm\)0.7 & 169.1\(\pm\)19.1 & 188.0\(\pm\)16.5 & \textbf{218.5\(\pm\)22.2} & 1.65\(\times\) \\
+1800 & 133.2\(\pm\)0.8 & 160.8\(\pm\)28.2 & 188.0\(\pm\)17.8 & \textbf{219.1\(\pm\)21.0} & 1.64\(\times\) \\
 \bottomrule
 \end{tabular}
 \end{table}

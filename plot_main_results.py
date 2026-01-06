@@ -2,7 +2,7 @@
 """
 Generate grouped bar chart for main results across two datasets (WikiText-2 vs PG-19).
 Data sources (source of truth):
-  - results/adaptive/main/paper_benchmark_main_1500tokens.json
+  - results/adaptive/main/paper_benchmark_main_1500tokens_2.json
   - results/adaptive/pg19/pg19_benchmark_1500tokens.json
 
 Each subplot shows grouped bars per method with two bars (WikiText-2, PG-19).
@@ -24,7 +24,7 @@ plt.rcParams['axes.labelcolor'] = '#333333'
 plt.rcParams['xtick.color'] = '#333333'
 plt.rcParams['ytick.color'] = '#333333'
 
-wt_path = Path("results/adaptive/main/paper_benchmark_main_1500tokens.json")
+wt_path = Path("results/adaptive/main/paper_benchmark_main_1500tokens_2.json")
 pg_path = Path("results/adaptive/pg19/pg19_benchmark_1500tokens.json")
 wt = json.loads(wt_path.read_text())
 pg = json.loads(pg_path.read_text())
@@ -51,6 +51,9 @@ wt_speedup = []
 pg_speedup = []
 labels = []
 
+wt_ar_thr = wt_map["Baseline (AR)"]["throughput_tps"]
+pg_ar_thr = pg_map["Baseline (AR)"]["throughput_tps"]
+
 for key, label in plot_methods:
     labels.append(label)
     if key == "DynaTree":
@@ -61,8 +64,9 @@ for key, label in plot_methods:
         pg_r = pg_map[key]
     wt_throughput.append(wt_r["throughput_tps"])
     pg_throughput.append(pg_r["throughput_tps"])
-    wt_speedup.append(wt_r["speedup"])
-    pg_speedup.append(pg_r["speedup"])
+    # Some result files contain a placeholder speedup field; compute from throughputs for consistency.
+    wt_speedup.append(wt_r["throughput_tps"] / wt_ar_thr)
+    pg_speedup.append(pg_r["throughput_tps"] / pg_ar_thr)
 
 # Set up the figure - grouped bars (two datasets)
 fig, axes = plt.subplots(1, 2, figsize=(10, 4))
