@@ -19,6 +19,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import Normalize
 
 # Academic paper style settings (consistent with other plotting scripts)
 plt.rcParams["font.family"] = "serif"
@@ -61,11 +62,18 @@ def main() -> None:
     x = np.array([float(r["config_params"]["high_conf_threshold"]) for r in thr_rows])
     y = np.array([float(r["config_params"]["low_conf_threshold"]) for r in thr_rows])
     c = np.array([float(r.get("throughput_tps", 0.0)) for r in thr_rows])
+    # Widen color normalization to reduce perceived contrast between nearby points
+    # (keeps mapping stable and avoids "too different" colors for small deltas).
+    cmin = float(np.min(c)) if len(c) else 0.0
+    cmax = float(np.max(c)) if len(c) else 1.0
+    span = max(1e-6, cmax - cmin)
+    norm = Normalize(vmin=max(0.0, cmin - 0.35 * span), vmax=cmax + 0.35 * span)
     sc = ax0.scatter(
         x,
         y,
         c=c,
         cmap="viridis",
+        norm=norm,
         s=75,
         edgecolors="#333333",
         linewidths=0.4,
@@ -74,11 +82,12 @@ def main() -> None:
     ax0.set_title(r"(a) Thresholds $(\tau_h,\tau_\ell)$", fontsize=11, pad=8)
     ax0.set_xlabel(r"$\tau_h$", fontsize=10)
     ax0.set_ylabel(r"$\tau_\ell$", fontsize=10)
-    ax0.grid(True, linestyle=":", alpha=0.35, linewidth=0.6)
+    ax0.grid(True, linestyle=":", alpha=0.55, linewidth=0.8, color="#777777")
     ax0.set_xticks(sorted(set(x.tolist())))
     ax0.set_yticks(sorted(set(y.tolist())))
 
-    cbar0 = fig.colorbar(sc, ax=ax0, fraction=0.046, pad=0.04)
+    # Make the colorbar visually longer/taller (more like a "full" bar).
+    cbar0 = fig.colorbar(sc, ax=ax0, fraction=0.055, pad=0.03, shrink=1.05, aspect=28)
     cbar0.set_label("Throughput (tokens/s)", fontsize=10)
 
     ax0.text(
