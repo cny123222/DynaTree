@@ -438,6 +438,9 @@ We presented DynaTree, a greedy-consistent tree-based speculative decoding metho
 
 \section{Experimental Configuration Details}
 \label{app:exp-config}
+\paragraph{Data traceability.}
+All appendix figures and tables are generated from the logged JSON result files included in the repository. We do not introduce any unlogged (hand-entered) experimental numbers. When a result file contains an auxiliary \texttt{speedup} field, we recompute speedup as \(\mathrm{TPS}/\mathrm{TPS}_{\mathrm{AR}}\) under the same setting (Section~\ref{main-results}).
+
 \paragraph{Common settings.}
 Unless stated otherwise, we use WikiText-2 prompts, truncate the prompt length to \(L_{\max}=800\), and generate \(T\) new tokens with greedy decoding. We evaluate \(N=10\) prompts and discard the first \(W=2\) runs as warmup. Reported values are mean and standard deviation over the remaining runs.
 \paragraph{PG-19 setting.}
@@ -446,64 +449,6 @@ For PG-19, we use the same model pair and greedy decoding, with a maximum prompt
 We use a static-tree speculative decoder with a fixed \((D,B,\tau)\) configuration and node budget \(N_{\max}=256\). We report the exact configuration used alongside the corresponding results. We additionally report a fixed-tree hyperparameter sweep under the paper protocol in Appendix~\ref{app:additional-analyses} to verify that the static-tree baseline used in the main benchmark is reasonably tuned.
 \paragraph{DynaTree.}
 Unless stated otherwise, the adaptive configuration uses base depth \(D_0=5\), maximum depth \(D_{\max}=8\), branch bounds \((B_{\min},B_{\max})=(1,3)\), and confidence thresholds \((\tau_h,\tau_\ell)=(0.9,0.4)\). History Adaptation updates a small subset of these parameters based on recent verification outcomes.
-
-\section{Additional Experimental Analyses}
-\label{app:additional-analyses}
-\paragraph{Speedup computation.}
-Some auxiliary result files include a placeholder \texttt{speedup} field. Throughout this appendix, we compute speedup as the ratio between the method throughput and the corresponding autoregressive throughput under the same setting.
-
-\subsection{Parameter Sensitivity}
-We study the sensitivity of DynaTree to key drafting hyperparameters on WikiText-2 at \(T=1500\) using a comprehensive sweep that varies confidence thresholds, branch bounds, depth ranges, and selected cross-combinations. Since the sweep does not enumerate a full Cartesian grid for every parameter pair, we visualize thresholds as a sparse 2D scatter and use mean\(\pm\)std plots for breadth and depth.
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\linewidth]{../figures/parameter_sensitivity.pdf}
-\caption{\textbf{Sensitivity of DynaTree to drafting hyperparameters (WikiText-2, \(T=1500\)).} \textbf{(a)} Threshold sweep shown as a sparse 2D scatter over \((\tau_h,\tau_\ell)\), colored by throughput (tokens/s). \textbf{(b--c)} Breadth and depth sweeps shown as throughput mean\(\pm\)std across tested pair configurations. Horizontal lines denote the autoregressive and fixed-tree baselines measured in the same sweep run.}
-  \label{fig:parameter-sensitivity}
-\end{figure}
-
-\subsection{Fixed-tree Hyperparameter Sweep}
-We perform a fixed-tree hyperparameter sweep under the same evaluation protocol as our main benchmark to ensure the static-tree baseline is reasonably tuned. Figure~\ref{fig:fixed-tree-sweep} summarizes the sweep over depth \(D\), branching factor \(B\), and pruning threshold \(\tau\) on WikiText-2 at \(T=1500\).
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\linewidth]{../figures/fixed_tree_sweep.pdf}
-  \caption{\textbf{Fixed-tree hyperparameter sweep under the paper protocol (WikiText-2, \(T=1500\)).} Speedup is computed relative to autoregressive decoding under the same setting. Line plots use widened y-axis ranges to emphasize robustness across depth, branching, and threshold settings.}
-  \label{fig:fixed-tree-sweep}
-\end{figure}
-
-\subsection{Prompt Length Sensitivity}
-We evaluate the impact of input context length by varying the maximum prompt length \(L_{\max}\) on WikiText-2 under the same \(T=1500\) generation setting as the main benchmark. Figure~\ref{fig:prompt-length-sensitivity} reports throughput and speedup as functions of \(L_{\max}\), illustrating how speculative decoding performance changes as prefill cost increases.
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\linewidth]{../figures/prompt_length_sensitivity.pdf}
-  \caption{\textbf{Prompt length sensitivity on WikiText-2 (\(T=1500\)).} Throughput and speedup (relative to AR at the same \(L_{\max}\)) as functions of the maximum prompt length.}
-  \label{fig:prompt-length-sensitivity}
-\end{figure}
-
-\section{Memory Footprint Analysis}
-\label{app:memory}
-An important practical consideration for speculative decoding methods is their memory overhead. Table~\ref{tab:memory-footprint} reports peak GPU memory consumption across methods on PG-19 and WikiText-2 during the \(T=1500\) main benchmark. Overall, speculative decoding introduces a modest additional peak allocation (about 3\% on average in this setup) to maintain the draft-model KV cache and intermediate verification structures.
-
-\begin{table}[t]
-\centering
-\caption{\textbf{Peak GPU memory consumption comparison (\(T=1500\)).} Peak GPU memory (MB) during generation on PG-19 and WikiText-2 with Pythia-2.8B and Pythia-70M. Relative change is computed against the autoregressive baseline using the average of the two datasets.}
-\label{tab:memory-footprint}
-\small
-\begin{tabular}{lccccc}
-\toprule
-\multirow{2}{*}{Method} & \multicolumn{2}{c}{Peak Memory (MB)} & \multirow{2}{*}{Average (MB)} & \multirow{2}{*}{Rel. Change} \\
-\cmidrule(lr){2-3}
-& PG-19 & WikiText-2 & & \\
-\midrule
-AR (baseline) & 6157.7 & 6110.0 & 6133.9 & 0.00\% \\
-Linear Spec (\(K=5\)) & 6360.5 & 6313.8 & 6337.2 & +3.31\% \\
-Fixed Tree (\(D=5,B=2\)) & 6358.3 & 6312.8 & 6335.5 & +3.29\% \\
-\textbf{DynaTree} & \textbf{6359.4} & \textbf{6316.1} & \textbf{6337.7} & \textbf{+3.32\%} \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 \section{DynaTree Iteration Pseudocode}
 \label{app:algo}
@@ -558,5 +503,63 @@ branch bounds \(B_{\min}\le B_{\mathrm{mid}}\le B_{\max}\); confidence threshold
 \EndFunction
 \end{algorithmic}
 \end{algorithm}
+
+\section{Additional Experimental Analyses}
+\label{app:additional-analyses}
+\paragraph{Scope.}
+This appendix reports additional analyses that support the main claims: (i)~a fixed-tree sweep that validates the static-tree baseline is reasonably tuned; (ii)~sensitivity of DynaTree to drafting hyperparameters; (iii)~prompt-length sensitivity; and (iv)~memory footprint.
+
+\subsection{Fixed-tree Hyperparameter Sweep}
+We perform a fixed-tree hyperparameter sweep under the paper protocol to ensure the static-tree baseline is reasonably tuned. The sweep varies depth \(D\), branching factor \(B\), and pruning threshold \(\tau\) while holding the node budget fixed. Figure~\ref{fig:fixed-tree-sweep} summarizes how throughput-related metrics change across the grid, and illustrates that the baseline configuration reported in the main tables lies in a stable high-performing region rather than being a brittle outlier.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{../figures/fixed_tree_sweep.pdf}
+  \caption{\textbf{Fixed-tree hyperparameter sweep under the paper protocol (WikiText-2, \(T=1500\)).} Speedup is computed relative to autoregressive decoding under the same setting. Line plots use widened y-axis ranges to emphasize robustness across depth, branching, and threshold settings.}
+  \label{fig:fixed-tree-sweep}
+\end{figure}
+
+\subsection{Parameter Sensitivity}
+We study the sensitivity of DynaTree to key drafting hyperparameters on WikiText-2 at \(T=1500\) using a comprehensive sweep that varies confidence thresholds, branch bounds, depth ranges, and selected cross-combinations. Since the sweep does not enumerate a full Cartesian grid for every parameter pair, we visualize thresholds as a sparse 2D scatter and use mean\(\pm\)std plots for breadth and depth.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{../figures/parameter_sensitivity.pdf}
+\caption{\textbf{Sensitivity of DynaTree to drafting hyperparameters (WikiText-2, \(T=1500\)).} \textbf{(a)} Threshold sweep shown as a sparse 2D scatter over \((\tau_h,\tau_\ell)\), colored by throughput (tokens/s). \textbf{(b--c)} Breadth and depth sweeps shown as throughput mean\(\pm\)std across tested pair configurations. Horizontal lines denote the autoregressive and fixed-tree baselines measured in the same sweep run.}
+  \label{fig:parameter-sensitivity}
+\end{figure}
+
+\subsection{Prompt Length Sensitivity}
+We evaluate the impact of input context length by varying the maximum prompt length \(L_{\max}\) on WikiText-2 under the same \(T=1500\) generation setting as the main benchmark. Figure~\ref{fig:prompt-length-sensitivity} reports throughput and speedup as functions of \(L_{\max}\). This analysis isolates how longer prompts (higher prefill cost and longer KV caches) interact with speculative verification, under otherwise fixed decoding settings.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{../figures/prompt_length_sensitivity.pdf}
+  \caption{\textbf{Prompt length sensitivity on WikiText-2 (\(T=1500\)).} Throughput and speedup (relative to AR at the same \(L_{\max}\)) as functions of the maximum prompt length.}
+  \label{fig:prompt-length-sensitivity}
+\end{figure}
+
+\subsection{Memory Footprint Analysis}
+\label{app:memory}
+An important practical consideration for speculative decoding methods is their memory overhead. Table~\ref{tab:memory-footprint} reports peak GPU memory consumption across methods on PG-19 and WikiText-2 during the \(T=1500\) benchmark corresponding to Tables~\ref{tab:main-results}--\ref{tab:latency-metrics}. Overall, speculative decoding introduces a modest additional peak allocation (about 3\% on average in this setup) to maintain the draft-model KV cache and intermediate verification structures.
+
+\begin{table}[t]
+\centering
+\caption{\textbf{Peak GPU memory consumption comparison (\(T=1500\)).} Peak GPU memory (MB) during generation on PG-19 and WikiText-2 with Pythia-2.8B and Pythia-70M. Relative change is computed against the autoregressive baseline using the average of the two datasets. Linear speculative decoding uses \(K=5\) on PG-19 and \(K=8\) on WikiText-2 (matching Table~\ref{tab:main-results}).}
+\label{tab:memory-footprint}
+\small
+\begin{tabular}{lccccc}
+\toprule
+\multirow{2}{*}{Method} & \multicolumn{2}{c}{Peak Memory (MB)} & \multirow{2}{*}{Average (MB)} & \multirow{2}{*}{Rel. Change} \\
+\cmidrule(lr){2-3}
+& PG-19 & WikiText-2 & & \\
+\midrule
+AR (baseline) & 6156.5 & 6110.0 & 6133.3 & 0.00\% \\
+Linear Spec & 6363.0 & 6315.3 & 6339.2 & +3.36\% \\
+Fixed Tree (\(D{=}8,B{=}3,\tau{=}0.1\)) & 6354.6 & 6316.9 & 6335.7 & +3.30\% \\
+\textbf{DynaTree} & \textbf{6355.0} & \textbf{6316.4} & \textbf{6335.7} & \textbf{+3.30\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \end{document}
