@@ -65,6 +65,18 @@
 \usepackage{algorithm}     % float wrapper
 \usepackage{algpseudocode} % algorithmicx style (supports \Call)
 
+% --- Float layout tuning (NeurIPS-style: reduce large whitespace & avoid float-only pages) ---
+\setcounter{topnumber}{2}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
+\renewcommand{\topfraction}{0.90}
+\renewcommand{\bottomfraction}{0.80}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.85}
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\floatsep}{6pt plus 2pt minus 2pt}
+\setlength{\intextsep}{6pt plus 2pt minus 2pt}
+
 % Note. For the workshop paper template, both \title{} and \workshoptitle{} are required, with the former indicating the paper title shown in the title and the latter indicating the workshop title displayed in the footnote. 
 \title{DynaTree: Confidence-Aware Adaptive Tree Speculative Decoding for Efficient LLM Inference}
 
@@ -122,7 +134,7 @@ In summary, our contributions are:
   \item Experiments demonstrate that DynaTree improves throughput over autoregressive decoding, linear speculative decoding, and a fixed-tree baseline across WikiText-2 and PG-19, with a 1.65$\times$ speedup on WikiText-2 at \(T=1500\).
 \end{itemize}
 
-\begin{figure}[t]
+\begin{figure}[tbp]
   \centering
   \includegraphics[width=0.92\linewidth]{../figures/decode-v1.png}
   \caption{\textbf{Comparison of three decoding paradigms.} \textbf{Left:} Autoregressive (AR) decoding generates tokens sequentially, requiring one LLM forward pass per token. \textbf{Middle:} Linear speculative decoding drafts a single token chain; early rejection wastes all subsequent drafted tokens. \textbf{Right:} Tree-based speculative decoding (DynaTree) explores multiple paths in parallel, enabling recovery from draft errors and committing longer sequences per iteration. The multi-path exploration fundamentally addresses the brittleness of linear drafting while maintaining output correctness through structured tree attention verification.}
@@ -159,7 +171,7 @@ Speculative decoding accelerates generation by proposing candidate tokens with \
 \subsection{Overview of DynaTree}
 DynaTree generalizes linear speculative decoding from a single draft chain to a \emph{draft token tree}. In each iteration, it first performs \emph{adaptive tree drafting} with \(M_D\), where the effective tree breadth and depth are determined on-the-fly from the draft distribution and the cumulative path probability. Concretely, for a draft node \(u\) with draft logits \(\mathbf{h}(u)\), we define the draft confidence \(c(u)=\max_{v\in\mathcal{V}}\mathrm{softmax}(\mathbf{h}(u))_v\) and use it to select a per-node branching factor \(B(u)\in\{B_{\min},B_{\mathrm{mid}},B_{\max}\}\). We further control expansion depth via the cumulative probability \(p(u)=\exp(\bar{\ell}_u)\), combining early stopping for low-probability branches with deeper expansion along high-probability paths. The resulting candidate tree is then \textbf{verified in parallel} in a single forward pass of \(M_T\) using tree attention, followed by \textbf{greedy path selection} and \textbf{KV-cache update} for committed tokens. Finally, DynaTree maintains a short window of recent acceptance statistics to adjust drafting thresholds for subsequent iterations.
 
-\begin{figure}[t]
+\begin{figure}[tbp]
   \centering
   \includegraphics[width=0.92\linewidth]{../figures/dynatree-v9.5.png}
   \caption{\textbf{One iteration of DynaTree decoding.} The process consists of six main stages: (1)~\emph{Adaptive Tree Drafting:} The draft model expands a candidate tree with three adaptive mechanisms: confidence-aware branching adjusts the number of child nodes (1--3) per expansion based on draft model confidence; dynamic depth control implements early stopping for low cumulative probability branches and deep expansion for high-probability paths; adaptive pruning removes branches below probability threshold $\tau$ or exceeding node budget $N_{\max}$. (2)~\emph{Flattening \& Masking:} The pruned tree is serialized in breadth-first order, and a causal attention mask is constructed to ensure each node attends only to its ancestors. (3)~\emph{Parallel Verification:} The target model verifies all candidates in a single forward pass. (4)~\emph{Path Selection:} The longest path where drafted tokens match the target model's greedy predictions is identified. (5)~\emph{Cache Update:} The committed tokens are used to update the context and key-value cache for the next iteration. (6)~\emph{Historical Adjustment:} Acceptance rate from recent rounds feeds back to adjust confidence thresholds and base depth for the next iteration. This three-phase adaptive mechanism enables efficient multi-path exploration while maintaining correctness guarantees for greedy decoding.}
@@ -279,7 +291,7 @@ We compare against the following baselines under identical greedy decoding setti
 \label{main-results}
 Table~\ref{tab:main-results} reports end-to-end throughput on WikiText-2 and PG-19 for \(T=1500\). DynaTree achieves the highest throughput on both datasets, improving over autoregressive decoding, linear speculative decoding, and a fixed-tree baseline. The gains over a tuned static tree (e.g., 218.5~t/s vs.\ 188.0~t/s on WikiText-2) suggest that allocating verification budget according to local model uncertainty improves the draft--verify trade-off beyond a fixed configuration.
 
-\begin{table}[t]
+\begin{table}[tbp]
 \centering
 \caption{\textbf{Main results (\(T=1500\)).} Throughput (t/s) and speedup relative to autoregressive decoding on WikiText-2 and PG-19. Values are mean\(\pm\)std over prompts (excluding warmup).}
 \label{tab:main-results}
@@ -310,7 +322,7 @@ Figure~\ref{fig:main-results} visualizes throughput and speedup. Linear speculat
 \paragraph{Latency breakdown analysis.}
 Table~\ref{tab:latency-metrics} reports TTFT and TPOT for \(T=1500\). Across datasets, speculative decoding reduces TTFT relative to autoregressive decoding by amortizing verification over multiple tokens, and DynaTree achieves the lowest TPOT by committing longer prefixes per verification step.
 
-\begin{table}[t]
+\begin{table}[tbp]
 \centering
 \caption{\textbf{Latency metrics (\(T=1500\)).} We report TTFT (latency to first output token) and TPOT (average per-token latency) on WikiText-2 and PG-19. Values are mean\(\pm\)std over prompts (excluding warmup).}
 \label{tab:latency-metrics}
@@ -332,7 +344,7 @@ Fixed Tree (\(D=5,B=2\)) & 15.0\(\pm\)3.9 & 5.35\(\pm\)0.50 & 10.4\(\pm\)0.4 & 5
 \paragraph{Verification efficiency.}
 To contextualize throughput gains, Table~\ref{tab:verification-efficiency} reports auxiliary verification statistics: tokens committed per verification round (\(\bar{L}\)), average committed path length (\(\bar{\ell}\)), and the number of verification rounds required to generate \(T=1500\) tokens. Tree-based methods commit longer prefixes per step and thus require fewer rounds than autoregressive decoding; DynaTree further reduces the number of rounds by adapting the draft structure to recent verification outcomes.
 
-\begin{table}[t]
+\begin{table}[tbp]
 \centering
 \caption{\textbf{Verification efficiency metrics (\(T=1500\)).} We report acceptance rate (\textbf{Accept.}), tokens committed per verification iteration (\(\bar{L}\)), average committed path length before the bonus token (\(\bar{\ell}\)), and the total number of verification iterations (\#Iter.) needed to generate \(T\) tokens. Due to the bonus-token convention in tree verification, \textbf{Accept.} can slightly exceed 100\% for tree-based methods. Values are mean across prompts (excluding warmup).}
 \label{tab:verification-efficiency}
@@ -355,13 +367,11 @@ Fixed Tree (\(D=5,B=2\)) & 82.6\% & 5.75 & 5.78 & 261 & 82.9\% & 5.75 & 5.80 & 2
 \paragraph{Discussion.}
 Two trends help explain the observed speedups. First, compared with linear drafting, tree-based methods are less sensitive to early mismatches: when the draft model diverges, alternative branches can still contain a greedy-consistent continuation, which increases the expected committed prefix length per verification step. Second, compared with a fixed tree, DynaTree allocates more of the node budget to regions where the draft model is confident while curtailing wasteful expansion in uncertain regions. This adaptivity improves verification efficiency (Table~\ref{tab:verification-efficiency}) and translates into higher end-to-end throughput (Table~\ref{tab:main-results}).
 
-\FloatBarrier
-
 \subsection{Ablation Study}
 \label{sec:ablation}
 We provide a progressive ablation on WikiText-2 under the same \(T=1500\) setting as the main benchmark, isolating the contribution of each adaptive component relative to a fixed-tree backbone. In this regime, adapting breadth alone may introduce control overhead without reliably increasing the committed prefix length, whereas dynamic depth control more directly increases per-iteration progress and yields the dominant throughput gain. Table~\ref{tab:ablation} therefore reports the combined effect of \emph{Dynamic Breadth \& Depth}, followed by the additional improvement from \emph{History Adaptation}, which stabilizes the configuration by reacting to recent verification outcomes.
 
-\begin{table}[t]
+\begin{table}[tbp]
 \centering
 \caption{\textbf{Ablation-style progressive comparison on WikiText-2 (\(T=1500\)).} We compare a fixed tree (\(D_0=5,B=2\)) with variants that add Dynamic Breadth \& Depth and History Adaptation. Speedup is computed relative to the autoregressive baseline.}
 \label{tab:ablation}
@@ -377,7 +387,7 @@ Fixed Tree (\(D_0=5,B=2\)) & 188.0\(\pm\)16.5 & 1.42\(\times\) & 0.0\% \\
   \end{tabular}
 \end{table}
 
-\begin{figure}[t]
+\begin{figure}[tbp]
   \centering
   \includegraphics[width=0.85\linewidth]{../figures/ablation_progression.pdf}
   \caption{\textbf{Ablation progression on WikiText-2 (\(T=1500\)).} Each panel combines two complementary metrics. Left: throughput (bars) alongside the number of verification iterations (\#Iter.). Right: per-iteration progress (\(\bar{L}\), tokens/iter) alongside acceptance rate (separate axis). Dynamic Breadth \& Depth increases per-step progress and reduces iterations; History Adaptation further improves per-step progress and iteration count.}
@@ -387,13 +397,11 @@ Fixed Tree (\(D_0=5,B=2\)) & 188.0\(\pm\)16.5 & 1.42\(\times\) & 0.0\% \\
 \paragraph{Interpretation.}
 Dynamic depth control primarily improves throughput by increasing per-iteration progress (\(\bar{L}\)) and reducing the number of verification rounds required to reach \(T\) tokens. History Adaptation then refines the draft aggressiveness based on recent outcomes, stabilizing verification efficiency and yielding a further throughput gain without increasing peak memory (Appendix~\ref{app:memory}).
 
-\FloatBarrier
-
 \subsection{Sequence Length Scaling}
 \label{sec:length-scaling}
 We evaluate how throughput varies with generation length \(T\) on WikiText-2, comparing autoregressive decoding, linear speculative decoding, a fixed tree baseline, and DynaTree. Figure~\ref{fig:length-scaling} summarizes throughput trends across \(T\) (left) and decomposes these trends via \(\bar{L}\), \(\bar{\ell}\), and acceptance rate (right), illustrating how per-iteration progress and verification success vary with generation length.
 
-\begin{figure}[t]
+\begin{figure}[tbp]
   \centering
   \includegraphics[width=0.49\linewidth]{../figures/length_scaling.pdf}\hfill
   \includegraphics[width=0.49\linewidth]{../figures/length_scaling_efficiency.pdf}
@@ -403,8 +411,6 @@ We evaluate how throughput varies with generation length \(T\) on WikiText-2, co
 
 \paragraph{Analysis.}
 Across \(T\), DynaTree maintains strong throughput by sustaining a larger committed prefix per verification round while keeping acceptance rates stable. In contrast, linear speculation is more sensitive to occasional early mismatches: as the generation proceeds, a single rejection can truncate the reusable drafted chain and reduce effective progress per round. The efficiency view (right panel) highlights how changes in \(\bar{L}\), \(\bar{\ell}\), and acceptance jointly determine throughput, providing a mechanistic explanation of the observed scaling curves.
-
-\FloatBarrier
 
 \paragraph{Additional analyses.}
 We place supplementary parameter sensitivity analyses in Appendix~\ref{app:additional-analyses}.
