@@ -7,7 +7,7 @@
 ## ✅ **已完成内容总结**
 
 ### **图表**：
-- ✅ Figure 1: Architecture Overview (`dynatree-v7.png`) - 已插入
+- ✅ Figure 1: Architecture Overview (`dynatree-v10.png`) - 已插入
 - ✅ Figure 2: Main Results Bar Chart (`main_results_bars.pdf`) - 已插入
 - ✅ Figure 3: Parameter Sweep 6-panel (`param_sweep.pdf`) - 已插入
 - ✅ Figure 4: Length Scaling (`length_scaling.pdf`) - ✅ **刚用真实数据修复**
@@ -119,7 +119,7 @@ Metrics: Throughput (t/s) for each dataset
 - DynaTree: Draft树 → Target并行验证
 
 **是否需要**: 
-- ❌ 已有架构图 (dynatree-v7.png) 能说明并行验证
+- ❌ 已有架构图 (dynatree-v10.png) 能说明并行验证
 - ❌ Abstract 和 Introduction 的文字描述已经清楚
 
 #### **4b. Tree Attention Mask 可视化**

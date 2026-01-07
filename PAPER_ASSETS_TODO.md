@@ -5,7 +5,7 @@ This checklist is meant to be filled by you after we freeze the text. Items are 
 ### Figures (main paper)
 
 - ✅ **Figure 1: Architecture overview (`Fig.~\ref{fig:arch}`)** — **COMPLETED**
-  - **Status**: `figures/dynatree-v7.png` created and inserted
+  - **Status**: `figures/dynatree-v10.png` created and inserted
   - **Where used**: Methodology (Overview of DynaTree).
   - **What included**: One decoding iteration pipeline with:
     - Prefix + target KV cache

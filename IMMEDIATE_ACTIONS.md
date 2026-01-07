@@ -186,7 +186,7 @@
 
 ### 主要图表（正文）
 
-✅ **Figure 1**: Architecture Overview (`dynatree-v7.png`) - 手工绘制  
+✅ **Figure 1**: Architecture Overview (`dynatree-v10.png`) - 手工绘制  
 ✅ **Figure 2**: Main Results Bar Chart - 100%真实数据  
 ✅ **Figure 4/5**: Length Scaling Curve - 100%真实数据，**无 HF**  
 ✅ **Figure 6**: Cross-Dataset Comparison - 100%真实数据，**无 HF**  
@@ -244,7 +244,7 @@
 ### 图表文件
 ```
 figures/
-├── dynatree-v7.png                      # 架构图
+├── dynatree-v10.png                     # 架构图
 ├── main_results_bars.pdf                # Figure 2: 主结果柱状图
 ├── length_scaling.pdf                   # Figure 4/5: 长度扩展曲线
 ├── dataset_comparison.pdf               # Figure 6: 跨数据集对比

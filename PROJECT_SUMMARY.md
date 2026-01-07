@@ -388,7 +388,7 @@ LLM-Efficient-Reasoning/
 │   └── references.bib                    # 参考文献
 │
 ├── figures/                              # 图表文件
-│   ├── dynatree-v8.png                   # 架构图
+│   ├── dynatree-v10.png                  # 架构图
 │   ├── tree_config_heatmap.pdf           # 参数热力图
 │   ├── dataset_comparison.pdf            # 数据集对比
 │   ├── length_scaling.pdf                # 长度扩展
