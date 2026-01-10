@@ -112,13 +112,13 @@ Most deployed speculative decoders are \emph{linear}: the draft model proposes a
 
 However, existing tree-based approaches typically employ \emph{fixed} tree shapes with predetermined depth and branching factor~\cite{specinfer,medusa}. A fixed structure cannot adapt to varying draft confidence across contexts: it may over-explore when the draft distribution is peaked, and under-explore when the next-token distribution is flat, creating an \emph{efficiency gap}. Recent adaptive methods adjust draft length or verification thresholds~\cite{cm_asd,adaeagle,cas_spec}, but most focus on linear speculation rather than restructuring the tree itself.
 
-We propose \textbf{DynaTree}, a training-free tree speculative decoder that constructs a draft token tree with \emph{confidence-aware} adaptive drafting under an explicit node budget. DynaTree combines \emph{Dynamic Breadth}, \emph{Dynamic Depth}, and \emph{History Adaptation} to stabilize verification efficiency across iterations. Using tree attention, all drafted nodes are verified in a single target-model forward pass. Empirically, DynaTree improves throughput over autoregressive decoding, linear speculation, and tuned fixed-tree baselines on both WikiText-2 and PG-19 (Table~\ref{tab:main-results}).
+We propose \textbf{DynaTree}, a training-free tree speculative decoder that constructs a draft token tree with \emph{confidence-aware} adaptive drafting under an explicit node budget. DynaTree combines \emph{Dynamic Tree Breadth}, \emph{Dynamic Tree Depth}, and \emph{History Adaptation} to stabilize verification efficiency across iterations. Using tree attention, all drafted nodes are verified in a single target-model forward pass. Empirically, DynaTree improves throughput over autoregressive decoding, linear speculation, and tuned fixed-tree baselines on both WikiText-2 and PG-19 (Table~\ref{tab:main-results}).
 
 In summary, our contributions are:
 \begin{itemize}
   \item We propose \textbf{DynaTree}, a training-free tree speculative decoding framework that adaptively allocates verification budget via confidence-aware adjustments to tree breadth and depth under an explicit node budget.
   
-  \item We introduce a lightweight three-component adaptation mechanism (\emph{Dynamic Breadth}, \emph{Dynamic Depth}, and \emph{History Adaptation}) that integrates with tree-attention verification and probability-threshold pruning.
+  \item We introduce a lightweight three-component adaptation mechanism (\emph{Dynamic Tree Breadth}, \emph{Dynamic Tree Depth}, and \emph{History Adaptation}) that integrates with tree-attention verification and probability-threshold pruning.
   
   \item Experiments on WikiText-2 and PG-19 demonstrate consistent throughput and latency improvements over autoregressive decoding, linear speculative decoding, and tuned fixed-tree baselines, with up to 1.70$\times$ speedup at \(T=1500\).
 \end{itemize}
@@ -142,7 +142,7 @@ Speculative decoding improves generation efficiency by verifying draft proposals
 
 Tree-based speculative decoding generalizes linear drafting by verifying a token tree with a structured attention mask in a single target-model pass~\cite{specinfer,opt_tree,medusa,traversal_verification}. SpecInfer~\cite{specinfer} pioneered practical token-tree verification mechanisms, while OPT-Tree~\cite{opt_tree} searches for draft tree structures that improve the expected committed prefix length. Medusa~\cite{medusa} explores multi-token prediction via additional decoding heads. These approaches typically employ fixed tree structures, which motivates adaptive policies that allocate verification budget based on context-dependent uncertainty.
 
-Adaptive speculative decoding modulates drafting aggressiveness using confidence signals or learned predictors~\cite{cm_asd,adaeagle,cas_spec}. In contrast to adaptive \emph{length}-only policies, DynaTree adapts the tree structure itself by jointly controlling \emph{Dynamic Breadth} and \emph{Dynamic Depth} and incorporating \emph{History Adaptation}, while remaining training-free.
+Adaptive speculative decoding modulates drafting aggressiveness using confidence signals or learned predictors~\cite{cm_asd,adaeagle,cas_spec}. In contrast to adaptive \emph{length}-only policies, DynaTree adapts the tree structure itself by jointly controlling \emph{Dynamic Tree Breadth} and \emph{Dynamic Tree Depth} and incorporating \emph{History Adaptation}, while remaining training-free.
 
 \subsection{Dynamic Pruning Strategies}
 
@@ -161,8 +161,8 @@ Speculative decoding accelerates generation by proposing candidate tokens with \
 
 \subsection{Overview of DynaTree}
 DynaTree generalizes linear speculative decoding from a single draft chain to a \emph{draft token tree}. In each iteration, it constructs a candidate tree with \(M_D\) and verifies all drafted nodes in a single forward pass of \(M_T\) using tree attention. DynaTree's key innovation is \emph{confidence-aware adaptive drafting} that allocates verification budget based on draft uncertainty:
-\textbf{(i) Dynamic Breadth} selects a per-node branching factor from \(\{B_{\min},B_{\mathrm{mid}},B_{\max}\}\) using confidence thresholds \((\tau_h,\tau_\ell)\);
-\textbf{(ii) Dynamic Depth} gates expansion using cumulative path probability with early stopping and selective deep expansion up to \(D_{\max}\);
+\textbf{(i) Dynamic Tree Breadth} selects a per-node branching factor from \(\{B_{\min},B_{\mathrm{mid}},B_{\max}\}\) using confidence thresholds \((\tau_h,\tau_\ell)\);
+\textbf{(ii) Dynamic Tree Depth} gates expansion using cumulative path probability with early stopping and selective deep expansion up to \(D_{\max}\);
 and \textbf{(iii) History Adaptation} updates a small subset of drafting hyperparameters online using recent acceptance statistics.
 
 Figure~\ref{fig:arch} illustrates the end-to-end pipeline of a single DynaTree iteration.
@@ -175,9 +175,18 @@ Figure~\ref{fig:arch} illustrates the end-to-end pipeline of a single DynaTree i
 \end{figure}
 
 \subsection{Adaptive Tree Drafting}
+Figure~\ref{fig:our-approach} provides a schematic view of DynaTree's three adaptive mechanisms: Dynamic Tree Breadth, Dynamic Tree Depth, and Adaptive Pruning.
+
+\begin{figure}[tbp]
+  \centering
+  \includegraphics[width=0.98\linewidth]{../figures/our_approach.png}
+  \caption{\textbf{Illustration of DynaTree's adaptive mechanisms.} \textbf{(a) Dynamic Tree Breadth:} choose per-node branching \(B(u)\in\{B_{\min},B_{\mathrm{mid}},B_{\max}\}\) based on local confidence \(c(u)\). \textbf{(b) Dynamic Tree Depth:} control expansion using cumulative path probability \(p(u)\) with early stopping (\(p(u)<\rho_{\mathrm{stop}}\)), a base depth \(D_0\), and selective deep expansion beyond \(D_0\) only when \(p(u)>\rho_{\mathrm{deep}}\), up to a hard maximum depth \(D_{\max}\). \textbf{(c) Adaptive Pruning:} stop expanding nodes whose \(p(u)<\tau\) and cap the tree size by a strict node budget \(N_{\max}\).}
+  \label{fig:our-approach}
+\end{figure}
+
 We maintain a token tree \(\mathcal{T}=(\mathcal{N}, \mathcal{E})\) rooted at the current prefix \(x_{1:t}\), where each node \(u \in \mathcal{N}\) corresponds to a drafted token. Each node \(u\) is associated with: (i) token \(z_u \in \mathcal{V}\); (ii) parent \(\pi(u)\); (iii) depth \(d(u)\) from the root; (iv) draft log-probability \(\ell_u = \log p_D(z_u \mid \mathrm{ctx}(\pi(u)))\), where \(\mathrm{ctx}(\pi(u))\) denotes the unique root-to-\(\pi(u)\) token context; and (v) cumulative log-probability \(\bar{\ell}_u = \sum_{v \in \mathrm{path}(u)} \ell_v\), where \(\mathrm{path}(u)\) denotes the nodes on the root-to-\(u\) path. We also use the cumulative path probability \(p(u)=\exp(\bar{\ell}_u)\).
 
-\paragraph{Tree expansion.}
+\paragraph{Dynamic Tree Breadth.}
 Starting from the current prefix \(x_{1:t}\), we construct \(\mathcal{T}\) in a breadth-first manner under a strict node budget \(N_{\max}\). For any expandable node \(u\), let \(q_D(\cdot \mid u)\) denote the draft distribution conditioned on the unique root-to-\(u\) prefix, and define the local confidence
 \[
 c(u)\;=\;\max_{v\in\mathcal{V}} q_D(v\mid u).
@@ -194,19 +203,19 @@ B_{\max}, & c(u)<\tau_\ell,
 where \(0<\tau_\ell<\tau_h<1\) are confidence thresholds and \(1\le B_{\min}\le B_{\mathrm{mid}}\le B_{\max}\) are integer branch bounds.
 and expand \(u\) by adding the \(B(u)\) highest-probability children under \(q_D(\cdot\mid u)\). To adapt depth, we use the cumulative path probability \(p(u)=\exp(\bar{\ell}_u)\): low-probability branches are terminated early, while high-probability paths may be expanded beyond a base depth. Concretely, a node at depth \(d(u)\) is eligible for expansion only if it satisfies the depth-gating rule (defined in the next paragraph) and \(|\mathcal{N}|<N_{\max}\). Implementation details for cache reuse during expansion are deferred to Appendix~\ref{app:algo}.
 
-\paragraph{Dynamic depth control.}
+\paragraph{Dynamic Tree Depth.}
 Let \(D_0\) denote a base depth and \(D_{\max}\) a hard maximum depth. We gate expansion using two probability thresholds \(\rho_{\mathrm{stop}} < \rho_{\mathrm{deep}}\) on the cumulative path probability \(p(u)\). A node \(u\) at depth \(d(u)\) is expandable if and only if
 \[
 d(u) < D_{\max}
 \quad\wedge\quad
 p(u)\ge \rho_{\mathrm{stop}}
 \quad\wedge\quad
-\Bigl(d(u)<D_0 \;\;\vee\;\; p(u)\ge \rho_{\mathrm{deep}}\Bigr).
+\Bigl(d(u)<D_0 \;\;\vee\;\; p(u)>\rho_{\mathrm{deep}}\Bigr).
 \]
 We assume \(1\le D_0 < D_{\max}\) and \(0<\rho_{\mathrm{stop}}<\rho_{\mathrm{deep}}<1\).
 The first condition enforces a hard depth limit; the second implements \emph{early stopping} by terminating branches whose joint draft probability is too small; and the third allows \emph{deep expansion} beyond \(D_0\) only along sufficiently likely paths. In practice, \(\rho_{\mathrm{stop}}\) and \(\rho_{\mathrm{deep}}\) are tuned on a held-out set (Section~\ref{experiments}).
 
-\paragraph{Adaptive pruning under a node budget.}
+\paragraph{Adaptive Pruning under a node budget.}
 To reduce wasted verification on unlikely branches, we further prune any leaf \(u\) whose cumulative probability falls below a global threshold \(\tau\in(0,1)\):
 \[
 p(u) \;<\; \tau \quad \Longrightarrow \quad \text{prune } u.
@@ -285,7 +294,7 @@ We compare against the following baselines under identical greedy decoding setti
   \item \textbf{Autoregressive (AR):} Standard greedy decoding with the target model, serving as the performance baseline.
   \item \textbf{Linear speculative decoding:} A linear-chain speculative decoder that drafts \(K\) tokens with the draft model and verifies them with the target model in parallel, committing the longest greedy-consistent prefix~\citep{leviathan2023fast}.
   \item \textbf{Fixed Tree:} A static tree speculative decoder with fixed depth \(D\), fixed branching factor \(B\), and node budget \(N_{\max}\), representing a non-adaptive tree baseline. We report the configuration used wherever results are shown.
-  \item \textbf{DynaTree:} Our full method that augments the fixed-tree backbone with (i)~\emph{Dynamic Breadth}, (ii)~\emph{Dynamic Depth}, and (iii)~\emph{History Adaptation}. We ablate these components in Section~\ref{sec:ablation}.
+  \item \textbf{DynaTree:} Our full method that augments the fixed-tree backbone with (i)~\emph{Dynamic Tree Breadth}, (ii)~\emph{Dynamic Tree Depth}, and (iii)~\emph{History Adaptation}. We ablate these components in Section~\ref{sec:ablation}.
 \end{itemize}
 
 \subsection{Main Results}
@@ -370,11 +379,11 @@ Two trends help explain the observed speedups. First, compared with linear draft
 
 \subsection{Ablation Study}
 \label{sec:ablation}
-We provide a progressive ablation on WikiText-2 under the same \(T=1500\) setting as the main benchmark (Table~\ref{tab:ablation}), measuring the contribution of each adaptive component relative to a fixed-tree backbone. Since \emph{Dynamic Breadth} and \emph{Dynamic Depth} are coupled in how they trade verification breadth against the length of the committed path, we report them jointly as \emph{Dynamic Breadth \& Depth}. We then add \emph{History Adaptation}, which adjusts drafting hyperparameters based on recent verification outcomes.
+We provide a progressive ablation on WikiText-2 under the same \(T=1500\) setting as the main benchmark (Table~\ref{tab:ablation}), measuring the contribution of each adaptive component relative to a fixed-tree backbone. Since \emph{Dynamic Tree Breadth} and \emph{Dynamic Tree Depth} are coupled in how they trade verification breadth against the length of the committed path, we report them jointly as \emph{Dynamic Tree Breadth \& Depth}. We then add \emph{History Adaptation}, which adjusts drafting hyperparameters based on recent verification outcomes.
 
 \begin{table}[tbp]
 \centering
-\caption{\textbf{Ablation-style progressive comparison on WikiText-2 (\(T=1500\)).} We compare a fixed tree (\(D=5,B=2\)) with variants that add Dynamic Breadth \& Depth and History Adaptation. Speedup is computed relative to the autoregressive baseline.}
+\caption{\textbf{Ablation-style progressive comparison on WikiText-2 (\(T=1500\)).} We compare a fixed tree (\(D=5,B=2\)) with variants that add Dynamic Tree Breadth \& Depth and History Adaptation. Speedup is computed relative to the autoregressive baseline.}
 \label{tab:ablation}
 \small
 \begin{tabular}{lccc}
@@ -382,7 +391,7 @@ We provide a progressive ablation on WikiText-2 under the same \(T=1500\) settin
 Variant & Throughput (t/s) & Speedup & \(\Delta\) vs Fixed \\
     \midrule
 Fixed Tree (\(D=5,B=2\)) & 188.0\(\pm\)16.5 & 1.42\(\times\) & 0.0\% \\
-+ Dynamic Breadth \& Depth & 213.2\(\pm\)26.1 & 1.61\(\times\) & +13.4\% \\
++ Dynamic Tree Breadth \& Depth & 213.2\(\pm\)26.1 & 1.61\(\times\) & +13.4\% \\
 \textbf{+ History Adaptation} & \textbf{218.5\(\pm\)22.2} & \textbf{1.65\(\times\)} & \textbf{+16.2\%} \\
     \bottomrule
   \end{tabular}
@@ -391,7 +400,7 @@ Fixed Tree (\(D=5,B=2\)) & 188.0\(\pm\)16.5 & 1.42\(\times\) & 0.0\% \\
 \begin{figure}[tbp]
   \centering
   \includegraphics[width=0.85\linewidth]{../figures/ablation_progression.pdf}
-  \caption{\textbf{Ablation progression on WikiText-2 (\(T=1500\)).} Each panel combines two complementary metrics. Left: throughput (bars) alongside the number of verification iterations (\#Iter.). Right: per-iteration progress (\(\bar{L}\), tokens/iter) alongside acceptance rate (separate axis). Dynamic Breadth \& Depth increases per-step progress and reduces iterations; History Adaptation further improves per-step progress and iteration count.}
+  \caption{\textbf{Ablation progression on WikiText-2 (\(T=1500\)).} Each panel combines two complementary metrics. Left: throughput (bars) alongside the number of verification iterations (\#Iter.). Right: per-iteration progress (\(\bar{L}\), tokens/iter) alongside acceptance rate (separate axis). Dynamic Tree Breadth \& Depth increases per-step progress and reduces iterations; History Adaptation further improves per-step progress and iteration count.}
   \label{fig:ablation-progression}
 \end{figure}
 
@@ -417,10 +426,10 @@ We place supplementary parameter sensitivity analyses in Appendix~\ref{app:addit
 
 
 \section{Conclusion}
-We presented DynaTree, a greedy-consistent tree-based speculative decoding method that drafts a candidate token tree with a lightweight model and verifies all drafted nodes in a single target-model pass using a structured attention mask. DynaTree adaptively allocates verification budget via \emph{Dynamic Breadth} and \emph{Dynamic Depth} and stabilizes decoding through \emph{History Adaptation}. Across WikiText-2 and PG-19 at \(T=1500\), DynaTree improves throughput and reduces per-token latency relative to autoregressive decoding, linear speculative decoding, and a fixed-tree baseline by increasing the expected number of committed tokens per verification iteration. An important limitation of our study is that we focus on greedy decoding with a fixed model pair on a single-GPU setup; extending adaptive tree verification to broader serving regimes (e.g., longer contexts, varying prompt lengths, and batching) and reducing system overhead via kernel-level optimizations are promising directions for future work.
+We presented DynaTree, a greedy-consistent tree-based speculative decoding method that drafts a candidate token tree with a lightweight model and verifies all drafted nodes in a single target-model pass using a structured attention mask. DynaTree adaptively allocates verification budget via \emph{Dynamic Tree Breadth} and \emph{Dynamic Tree Depth} and stabilizes decoding through \emph{History Adaptation}. Across WikiText-2 and PG-19 at \(T=1500\), DynaTree improves throughput and reduces per-token latency relative to autoregressive decoding, linear speculative decoding, and a fixed-tree baseline by increasing the expected number of committed tokens per verification iteration. An important limitation of our study is that we focus on greedy decoding with a fixed model pair on a single-GPU setup; extending adaptive tree verification to broader serving regimes (e.g., longer contexts, varying prompt lengths, and batching) and reducing system overhead via kernel-level optimizations are promising directions for future work.
 
 \FloatBarrier % ensure all floats are placed before references
-\bibliographystyle{unsrtnat}
+\bibliographystyle{plainnat}
 \bibliography{references}
 
 \appendix
@@ -469,7 +478,7 @@ branch bounds \(B_{\min}\le B_{\mathrm{mid}}\le B_{\max}\); confidence threshold
 
 \Statex
 \Function{\textproc{DraftTree}}{$x_{1:t}, B_{\min}, B_{\mathrm{mid}}, B_{\max}, \tau_\ell, \tau_h, D_0, D_{\max}, \rho_{\mathrm{stop}}, \rho_{\mathrm{deep}}, \tau, N_{\max}$}
-  \Comment{Draft a candidate token tree with Dynamic Breadth, Dynamic Depth, and pruning under a node budget.}
+  \Comment{Draft a candidate token tree with Dynamic Tree Breadth, Dynamic Tree Depth, and pruning under a node budget.}
   \State Run \(M_D\) on \(x_{1:t}\); let \(u_0\) be the \(\top 1\) token; initialize \(\mathcal{T}\) with root \(u_0\)
   \State \(\mathcal{A} \gets \{u_0\}\) \Comment{active frontier}
   \While{$|\mathcal{A}|>0$ \textbf{and} $|\mathcal{T}|<N_{\max}$}
@@ -477,7 +486,7 @@ branch bounds \(B_{\min}\le B_{\mathrm{mid}}\le B_{\max}\); confidence threshold
     \If{$\exp(\bar{\ell}_u) < \tau$} \State \textbf{continue} \EndIf \Comment{probability-threshold pruning}
     \If{$d(u)\ge D_{\max}$} \State \textbf{continue} \EndIf
     \If{$\exp(\bar{\ell}_u) < \rho_{\mathrm{stop}}$} \State \textbf{continue} \EndIf \Comment{early stopping}
-    \If{$d(u)\ge D_0$ \textbf{and} $\exp(\bar{\ell}_u) < \rho_{\mathrm{deep}}$} \State \textbf{continue} \EndIf \Comment{depth gating}
+    \If{$d(u)\ge D_0$ \textbf{and} $\exp(\bar{\ell}_u) \le \rho_{\mathrm{deep}}$} \State \textbf{continue} \EndIf \Comment{depth gating}
     \State Do one cached step of \(M_D\) from \(u\); compute confidence \(c(u)=\max \mathrm{softmax}(\mathbf{h}(u))\)
     \State Set \(B(u)\gets B_{\min}\) if \(c(u)\ge\tau_h\), \(B_{\max}\) if \(c(u)<\tau_\ell\), else \(B_{\mathrm{mid}}\)
     \State Take \(\top B(u)\) next-token candidates; add each child \(v\) to \(\mathcal{T}\) and push \(v\) into \(\mathcal{A}\) until \(N_{\max}\)
