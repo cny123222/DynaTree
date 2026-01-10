@@ -170,7 +170,7 @@ Figure~\ref{fig:arch} illustrates the end-to-end pipeline of a single DynaTree i
 \begin{figure}[tbp]
   \centering
   \includegraphics[width=1.0\linewidth]{../figures/dynatree-v10.png}
-  \caption{\textbf{One iteration of DynaTree decoding (end-to-end pipeline).} (1)~\textbf{Adaptive tree drafting:} the draft model expands a candidate token tree under node budget \(N_{\max}\), using \emph{Dynamic Breadth} (confidence-thresholded branching) and \emph{Dynamic Depth} (early stopping / selective deep expansion), with probability-threshold pruning. (2)~\textbf{Serialization \& masking:} the pruned tree is serialized (BFS order) and converted into a tree-attention mask so each node attends only to its prefix and ancestors. (3)~\textbf{Parallel verification:} the target model verifies all drafted candidates in a single forward pass. (4)~\textbf{Path selection \& commit:} we identify the longest greedy-consistent path (plus a bonus token) and commit it. (5)~\textbf{Cache update:} committed tokens update the context and target-model KV cache. (6)~\textbf{History adaptation:} recent acceptance statistics adjust drafting hyperparameters for the next iteration.}
+  \caption{\textbf{One iteration of DynaTree decoding (end-to-end pipeline).} (1)~\textbf{Adaptive tree drafting:} the draft model expands a candidate token tree under node budget \(N_{\max}\), using \emph{Dynamic Breadth} (confidence-thresholded branching) and \emph{Dynamic Depth} (early stopping / selective deep expansion), with \emph{adaptive pruning} (probability-threshold pruning). (2)~\textbf{Serialization \& masking:} the pruned tree is serialized (BFS order) and converted into a tree-attention mask so each node attends only to its prefix and ancestors. (3)~\textbf{Parallel verification:} the target model verifies all drafted candidates in a single forward pass. (4)~\textbf{Path selection \& commit:} we identify the longest greedy-consistent path (plus a bonus token) and commit it. (5)~\textbf{Cache update:} committed tokens update the context and target-model KV cache. (6)~\textbf{History adaptation:} recent acceptance statistics adjust drafting hyperparameters for the next iteration.}
   \label{fig:arch}
 \end{figure}
 
@@ -230,7 +230,7 @@ with step sizes \(\eta_D,\eta_h>0\) and \(\mathrm{clip}(\cdot)\) enforcing valid
 We provide full pseudocode for one DynaTree iteration in Appendix~\ref{app:algo}.
 
 \subsection{Tree Attention for Parallel Verification}
-To verify all drafted tokens in one target-model forward pass, we \emph{flatten} the tree in breadth-first order (BFS), producing an ordered node list \((u_1,\dots,u_n)\) and token sequence \(z_{1:n}\) where \(z_i=z_{u_i}\). Let \(\mathrm{pos}(u_i)=i\). We then construct a boolean attention mask \(\mathbf{A} \in \{0,1\}^{n \times (t+n)}\) such that each drafted token attends to: (i) all prefix tokens \(x_{1:t}\), and (ii) only its ancestors (including itself) among drafted nodes:
+To verify all drafted tokens in one target-model forward pass, we \emph{serialize} the tree in breadth-first order (BFS)---equivalently, \emph{flatten} it into an ordered node list \((u_1,\dots,u_n)\) and token sequence \(z_{1:n}\) where \(z_i=z_{u_i}\). Let \(\mathrm{pos}(u_i)=i\). We then construct a boolean tree-attention mask \(\mathbf{A} \in \{0,1\}^{n \times (t+n)}\) such that each drafted token attends to: (i) all prefix tokens \(x_{1:t}\), and (ii) only its ancestors (including itself) among drafted nodes:
 \[
 \mathbf{A}_{i,j} =
 \begin{cases}
@@ -243,7 +243,7 @@ This mask ensures the conditional distribution computed at each node matches the
 
 \subsection{Greedy Path Selection and Cache Update}
 \paragraph{Verification signals.}
-Let \(\hat{y}_{t+1} = \arg\max p_T(\cdot \mid x_{1:t})\) be the target model's greedy next token from the prefix (available from the prefix logits). For each tree node \(u\) with flattened position \(i\), the target forward pass outputs logits \(\mathbf{s}_i\), whose argmax \(\hat{y}(u)=\arg\max \mathbf{s}_i\) corresponds to the greedy \emph{next-token} prediction after consuming the path to \(u\).
+Let \(\hat{y}_{t+1} = \arg\max p_T(\cdot \mid x_{1:t})\) be the target model's greedy next token from the prefix (available from the prefix logits). For each tree node \(u\) with serialized (flattened) position \(i\), the target forward pass outputs logits \(\mathbf{s}_i\), whose argmax \(\hat{y}(u)=\arg\max \mathbf{s}_i\) corresponds to the greedy \emph{next-token} prediction after consuming the path to \(u\).
 
 \paragraph{Longest valid path.}
 DynaTree commits the longest path \(u_0 \rightarrow u_1 \rightarrow \cdots \rightarrow u_m\) such that the drafted token at each node matches the target greedy prediction from its parent context:
@@ -460,7 +460,7 @@ branch bounds \(B_{\min}\le B_{\mathrm{mid}}\le B_{\max}\); confidence threshold
 
 \State \(\ell \gets \Call{SeqLen}{\mathcal{K}_T}\) \Comment{record prefix cache length}
 \State \(\mathcal{T} \gets \Call{DraftTree}{x_{1:t}, B_{\min}, B_{\mathrm{mid}}, B_{\max}, \tau_\ell, \tau_h, D_0, D_{\max}, \rho_{\mathrm{stop}}, \rho_{\mathrm{deep}}, \tau, N_{\max}}\)
-\State \(\mathbf{z}_{1:n} \gets \Call{BFSFlatten}{\mathcal{T}}\); \(\mathbf{A} \gets \Call{TreeMask}{\mathcal{T}, \ell}\) \Comment{prefix + ancestors only}
+\State \(\mathbf{z}_{1:n} \gets \Call{BFSSerialize}{\mathcal{T}}\); \(\mathbf{A} \gets \Call{TreeAttnMask}{\mathcal{T}, \ell}\) \Comment{BFS serialization + tree attention mask (prefix + ancestors only)}
 \State \(\mathbf{s}_{1:n} \gets M_T(\mathbf{z}_{1:n}; \mathbf{A}, \mathcal{K}_T)\); \(\hat{\mathbf{y}} \gets \arg\max \mathbf{s}_{1:n}\)
 \State \(y_{t+1:t+L} \gets \Call{SelectCommit}{\mathcal{T}, \hat{\mathbf{y}}, \mathbf{s}_{\text{last}}}\)
 \State \(\mathcal{K}_T \gets \Call{Crop}{\mathcal{K}_T,\ell}\); \(\mathcal{K}_T \gets M_T(y_{t+1:t+L}; \mathcal{K}_T)\) \Comment{rollback + rebuild}
