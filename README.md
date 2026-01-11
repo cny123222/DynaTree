@@ -43,25 +43,24 @@ kvcompress/              KV-cache compression library (course module)
 
 ---
 
-## Results at a glance (figures)
+## Main results (paper Table 1, \(T=1500\))
 
-**Adaptive mechanisms overview (DynaTree):**
+This table mirrors the **main results table in** `paper/dynatree.tex` (throughput in tokens/s, mean\(\pm\)std over prompts; speedup vs AR). Linear speculation uses **\(K=8\)** on WikiText-2 and **\(K=5\)** on PG-19. The tuned fixed-tree baseline uses **\(D=8\)**, **\(B=3\)**, **\(\tau=0.1\)**.
 
-![DynaTree adaptive mechanisms](figures/our_approach.png)
+| Method | WikiText-2 Throughput (tokens/s) | WikiText-2 Speedup | PG-19 Throughput (tokens/s) | PG-19 Speedup |
+|---|---:|---:|---:|---:|
+| AR | 133.4±0.5 | 1.00× | 114.8±20.6 | 1.00× |
+| Linear Spec | 196.1±37.8 | 1.47× | 144.9±28.6 | 1.26× |
+| Fixed Tree | 200.7±41.7 | 1.50× | 185.5±33.2 | 1.62× |
+| **DynaTree** | **219.5±22.2** | **1.64×** | **194.9±35.6** | **1.70×** |
 
-**Main results (throughput / speedup):**
+Figure view:
 
 ![Main results bars](figures/main_results_bars.png)
 
-**Length scaling:**
-
-![Length scaling (four panels)](figures/length_scaling_fourpanel.png)
-
-**Fixed-tree sweep (paper protocol):**
-
-![Fixed-tree sweep](figures/fixed_tree_sweep.png)
-
-**Note**: The authoritative numbers come from JSON logs under `results/`. Figures under `figures/` are the rendered plots used for the paper and this README.
+**Traceability (JSON source files)**:
+- WikiText-2 main benchmark: `results/adaptive/main_D8B3/1500/results.json`
+- PG-19 main benchmark: `results/adaptive/pg19/pg19_benchmark_D8B3.json`
 
 ---
 
@@ -124,8 +123,8 @@ latexmk -pdf -interaction=nonstopmode -halt-on-error dynatree.tex
 
 Output: `paper/dynatree.pdf`
 
-### 1) Main results (AR vs linear spec vs fixed tree vs adaptive phases)
-This is the main benchmark used to generate the paper’s primary comparison under the WikiText-2 protocol.
+### 1) Main results on WikiText-2 (\(T=1500\))
+Generates the WikiText-2 portion of the main table (and intermediate per-method metrics).
 
 ```bash
 python papers/benchmark_main_D8B3.py \
@@ -135,37 +134,25 @@ python papers/benchmark_main_D8B3.py \
   --num-samples 10 \
   --warmup-runs 2 \
   --max-prompt-length 800 \
-  --output results/adaptive/main_D8B3/results.json
+  --output results/adaptive/main_D8B3/1500/results.json
 ```
 
-### 2) Fixed-tree hyperparameter sweep (strong tuned baseline)
-Sweeps \(D, B, \\tau\\) under the same protocol to identify the best fixed-tree configuration.
+### 2) Main results on PG-19 (\(T=1500\))
+Generates the PG-19 portion of the main table.
 
 ```bash
-python papers/fixed_tree_sweep_paper.py \
+python papers/benchmark_adaptive_pg19.py \
   --target-model EleutherAI/pythia-2.8b \
   --draft-model EleutherAI/pythia-70m \
-  --output-dir results/adaptive/fixed_tree_sweep \
-  --num-prompts 10 \
-  --prompt-length 800 \
   --max-new-tokens 1500 \
-  --num-runs 2
-```
-
-### 3) Pruning ablation (Tree V2: with vs without pruning)
-
-```bash
-python papers/benchmark_ablation_pruning.py \
-  --target-model EleutherAI/pythia-2.8b \
-  --draft-model EleutherAI/pythia-70m \
-  --max-new-tokens 500 \
   --num-samples 10 \
   --warmup-runs 2 \
-  --max-prompt-length 800 \
-  --output results/ablation_pruning_wikitext.json
+  --max-prompt-length 1000 \
+  --pg19-path data/pg19.parquet \
+  --output results/adaptive/pg19/pg19_benchmark_D8B3.json
 ```
 
-### 4) All-in-one adaptive benchmark (main + ablation + sensitivity + scalability)
+### 3) (Optional) All-in-one adaptive benchmark (main + ablation + sensitivity + scalability)
 
 ```bash
 python papers/benchmark_adaptive_paper.py \
@@ -192,8 +179,6 @@ Example commands:
 
 ```bash
 python plots/plot_main_results.py
-python plots/plot_length_scaling_fourpanel.py
-python plots/plot_fixed_tree_sweep.py
 ```
 
 ---
