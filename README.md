@@ -1,45 +1,23 @@
-# LLM-Efficient-Reasoning
+# DynaTree: Confidence-Aware Adaptive Tree Speculative Decoding for Efficient LLM Inference
 
-This repository contains research code and artifacts for **training-free LLM inference acceleration**, centered around **DynaTree** (adaptive tree speculative decoding), plus supporting benchmarks and plotting utilities.
+Reproducibility guide and research code for the NeurIPS-style paper:
+- **Paper (PDF/LaTeX)**: `paper/dynatree.pdf`, `paper/dynatree.tex`
+
+This repository contains **training-free** inference acceleration code centered around **DynaTree** (adaptive tree speculative decoding), plus supporting benchmarks, results, and plotting utilities.
+
+## Contents
+- [Main results (Table 1, \(T=1500\))](#main-results-paper-table-1-t1500)
+- [Environment setup](#environment-setup)
+- [Main experiments (paper protocol)](#main-experiments-paper-protocol)
+- [Plotting (paper figures)](#plotting-paper-figures)
+- [Repository layout](#repository-layout-high-level)
+- [Notes / limitations](#notes--limitations)
 
 - **Paper (PDF/LaTeX)**: `paper/dynatree.pdf`, `paper/dynatree.tex`
 - **Core decoding code**: `spec_decode/` (tree + linear speculative decoding)
 - **Benchmarks used to generate results**: `papers/`
 - **Plotting scripts (paper figures)**: `plots/`
 - **Figures used in the paper/README**: `figures/`
-
----
-
-## What’s inside
-
-### DynaTree (adaptive tree speculative decoding)
-DynaTree is a **training-free** tree-based speculative decoding framework that adaptively controls tree breadth/depth under a strict node budget and pruning, while preserving greedy-decoding exactness.
-
-Implementation lives primarily in:
-- `spec_decode/core/tree_speculative_generator_adaptive.py`
-- `spec_decode/core/token_tree.py`
-- `spec_decode/core/tree_speculative_generator.py` (tree verification utilities)
-
-### KV-cache compression (course project module)
-The repo also includes a KV-cache compression library (used for the broader course project scope):
-- `kvcompress/` (multiple KV-cache compression strategies and benchmarking utilities)
-
----
-
-## Repository layout (high-level)
-
-```text
-paper/                  NeurIPS-style paper sources + compiled PDF
-  dynatree.tex
-  dynatree.pdf
-  references.bib
-spec_decode/             speculative decoding implementations and eval scripts
-papers/                  benchmark scripts used to produce JSON logs
-plots/                   plotting scripts for paper figures
-results/                 logged JSON results (source of truth for numbers/plots)
-figures/                 figure assets used by the paper
-kvcompress/              KV-cache compression library (course module)
-```
 
 ---
 
@@ -179,6 +157,23 @@ Example commands:
 
 ```bash
 python plots/plot_main_results.py
+```
+
+---
+
+## Repository layout (high-level)
+
+```text
+paper/                  NeurIPS-style paper sources + compiled PDF
+  dynatree.tex
+  dynatree.pdf
+  references.bib
+spec_decode/             speculative decoding implementations and eval scripts
+papers/                  benchmark scripts used to produce JSON logs
+plots/                   plotting scripts for paper figures
+results/                 logged JSON results (source of truth for numbers/plots)
+figures/                 figure assets used by the paper
+kvcompress/              KV-cache compression library (course module)
 ```
 
 ---
