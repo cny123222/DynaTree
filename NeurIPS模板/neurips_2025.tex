@@ -69,7 +69,7 @@
 % Avoid overriding it here so the style file remains the single source of truth.
 
 % Note. For the workshop paper template, both \title{} and \workshoptitle{} are required, with the former indicating the paper title shown in the title and the latter indicating the workshop title displayed in the footnote. 
-\title{DynaTree: Confidence-Aware Adaptive Tree Speculative Decoding for Efficient LLM Inference}
+\title{DynaTree: Confidence-Aware Adaptive Tree Speculative Decoding for Efficient LLM Inference\thanks{Our code is currently available at \url{https://github.com/cny123222/LLM-Efficient-Reasoning}.}}
 
 
 % The \author macro works with any number of authors. There are two commands
@@ -98,7 +98,7 @@
 
 
 \begin{abstract}
-Autoregressive decoding in large language models (LLMs) is fundamentally sequential and therefore underutilizes modern accelerator parallelism during token generation. Speculative decoding mitigates this bottleneck by letting a lightweight draft model propose multiple tokens that are verified in parallel by the target model; however, linear variants explore only a single draft chain per step and can waste substantial computation when early tokens are rejected, while existing tree-based approaches often employ \emph{fixed} structures that cannot adapt to varying draft model confidence. We propose \textbf{DynaTree}, a training-free tree-based speculative decoding framework with \emph{confidence-aware} adaptive drafting that dynamically adjusts tree breadth and depth under an explicit node budget, combined with probability-threshold pruning. In the greedy-decoding setting, DynaTree is exact: it generates the same token sequence as the target model (no distributional bias). Experiments with Pythia-2.8B (target) and Pythia-70M (draft) show that DynaTree improves throughput over autoregressive decoding, linear speculative decoding, and tuned fixed-tree baselines on both WikiText-2 and PG-19. At \(T=1500\), DynaTree reaches 219.5~tokens/s on WikiText-2 (1.64$\times$) and 194.9~tokens/s on PG-19 (1.70$\times$).
+Autoregressive decoding in large language models (LLMs) is fundamentally sequential and therefore underutilizes modern accelerator parallelism during token generation. Speculative decoding mitigates this bottleneck by letting a lightweight draft model propose multiple tokens that are verified in parallel by the target model; however, linear variants explore only a single draft chain per step and can waste substantial computation when early tokens are rejected, while existing tree-based approaches often employ \emph{fixed} structures that cannot adapt to varying draft model confidence. We propose \textbf{DynaTree}, a training-free tree-based speculative decoding framework with \emph{confidence-aware} adaptive drafting that dynamically adjusts tree breadth and depth under an explicit node budget, combined with probability-threshold pruning to strictly manage computational overhead. In the greedy-decoding setting, DynaTree is exact: it generates the same token sequence as the target model (no distributional bias). Experiments with Pythia-2.8B (target) and Pythia-70M (draft) show that DynaTree improves throughput over autoregressive decoding, linear speculative decoding, and tuned fixed-tree baselines on both WikiText-2 and PG-19. At \(T=1500\), DynaTree reaches 219.5~tokens/s on WikiText-2 (1.64$\times$) and 194.9~tokens/s on PG-19 (1.70$\times$).
 \end{abstract}
 
 
@@ -418,7 +418,7 @@ We evaluate how performance varies with generation length \(T\) on WikiText-2, c
 \begin{figure}[tbp]
   \centering
   \includegraphics[width=\linewidth]{../figures/length_scaling_fourpanel.pdf}
-  \caption{\textbf{Sequence length scaling on WikiText-2.} (a) Throughput (tokens/s) as a function of \(T\) for AR, linear speculative decoding, a fixed tree baseline, and DynaTree. (b--d) Auxiliary verification statistics: tokens per iteration (\(\bar{L}\)), average committed path length (\(\bar{\ell}\)), and acceptance rate.}
+  \caption{\textbf{Sequence length scaling on WikiText-2.} (a) Throughput (tokens/s) as a function of \(T\) for AR, linear speculative decoding, a fixed tree baseline, and DynaTree. (b--d) Auxiliary verification statistics: tokens per iteration (\(\bar{L}\)), average committed path length (\(\bar{\ell}\)), and acceptance rate. DynaTree shows superior scalability on longer sequences, partly because History Adaptation requires a short warm-up to reach a stable operating point.}
   \label{fig:length-scaling}
 \end{figure}
 
