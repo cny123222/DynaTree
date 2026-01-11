@@ -146,7 +146,7 @@ Adaptive speculative decoding modulates drafting aggressiveness using confidence
 
 \subsection{Dynamic Pruning Strategies}
 
-Exponential candidate growth necessitates pruning to balance exploration against verification cost. Prior work studies early pruning and confidence-guided expansion for token trees~\cite{propd,dyspec}, as well as cost-aware tree construction and pruning that accounts for verification overhead~\cite{cast,opt_tree}. Retrieval-augmented heuristics can further bias exploration toward promising continuations~\cite{rasd}, and complementary lines adapt speculative hyperparameters online via bandit-style selection policies or threshold updates~\cite{banditspec,adasd}. DynaTree instantiates this trade-off with \emph{Adaptive Pruning} (probability thresholding under a strict node budget) and focuses on training-free, confidence-aware restructuring of the draft tree.
+Exponential candidate growth necessitates pruning to balance exploration against verification cost. Prior work studies early pruning and confidence-guided expansion for token trees~\cite{propd,dyspec}, as well as cost-aware tree construction and pruning that accounts for verification overhead~\cite{cast,opt_tree}. Retrieval-augmented heuristics can further bias exploration toward promising continuations~\cite{rasd}, and complementary lines adapt speculative hyperparameters online via bandit-style selection policies or threshold updates~\cite{arxiv_2505_15141,adasd}. DynaTree instantiates this trade-off with \emph{Adaptive Pruning} (probability thresholding under a strict node budget) and focuses on training-free, confidence-aware restructuring of the draft tree.
 
 
 \section{Methodology}
