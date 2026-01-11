@@ -164,6 +164,7 @@ DynaTree generalizes linear speculative decoding from a single draft chain to a 
 \textbf{(i) Dynamic Tree Breadth} selects a per-node branching factor from \(\{B_{\min},B_{\mathrm{mid}},B_{\max}\}\) using confidence thresholds \((\tau_h,\tau_\ell)\);
 \textbf{(ii) Dynamic Tree Depth} gates expansion using cumulative path probability with early stopping and selective deep expansion up to \(D_{\max}\);
 and \textbf{(iii) History Adaptation} updates a small subset of drafting hyperparameters online using recent acceptance statistics.
+Throughout, we use \textbf{Adaptive Pruning} to denote the combination of probability-threshold pruning with a strict node-budget cap (Figure~\ref{fig:our-approach}c).
 
 Figure~\ref{fig:arch} illustrates the end-to-end pipeline of a single DynaTree iteration.
 
@@ -264,6 +265,7 @@ If no drafted token matches the first greedy prediction, we fall back to committ
 
 \paragraph{KV-cache management.}
 Tree verification may populate key-value states for branches that are ultimately not committed. To maintain consistency with sequential decoding, we must restore the cache to the state corresponding to the committed prefix. Concretely, after identifying the committed path, we: (i)~discard all cached key-value pairs beyond the original prefix length \(t\); and (ii)~perform a forward pass of the committed tokens through the target model to populate the cache correctly for the next iteration. This ensures that subsequent iterations start from an identical cache state as sequential greedy decoding would produce.
+While this rollback-and-rebuild introduces extra target-model work, its cost scales only with the number of committed tokens in that iteration (rather than the full drafted tree) and is amortized by committing multiple tokens per verification round.
 
 \subsection{Correctness for Greedy Decoding}
 We sketch the correctness argument for greedy decoding (the setting used throughout our experiments). The tree attention mask guarantees that for any node \(u\), the target logits at \(u\) are computed from exactly the same conditioning context as in sequential decoding along the root-to-\(u\) path. DynaTree commits a drafted token \emph{only if} it equals the target greedy argmax under that context. Therefore, every committed token matches the token that greedy decoding with \(M_T\) would produce at that position. The cache rollback-and-rebuild step ensures the subsequent iteration starts from an identical KV state. Consequently, DynaTree generates exactly the same token sequence as greedy decoding with the target model, while reducing the number of expensive target-model forward passes by verifying many candidate tokens in parallel.
@@ -280,7 +282,7 @@ Let \(n=|\mathcal{N}|\le N_{\max}\) be the number of drafted nodes. Drafting req
 We evaluate DynaTree using models from the Pythia family~\cite{pythia}. Our target model \(M_T\) is Pythia-2.8B (2.8B parameters) and our draft model \(M_D\) is Pythia-70M (70M parameters). Throughout, we use deterministic greedy decoding so the generated sequence is uniquely determined by the model and prefix.
 
 \paragraph{Hardware and software.}
-All experiments run on a single NVIDIA A100 GPU with batch size \(1\) (one prompt per run). We implement DynaTree in PyTorch~\cite{pytorch} on top of HuggingFace Transformers~\cite{transformers}. Across methods, we reuse KV caches where applicable and synchronize GPU execution for timing (e.g., \texttt{torch.cuda.synchronize()}) to obtain comparable wall-clock measurements.
+All experiments run on a single NVIDIA A100 GPU with batch size \(1\) (one prompt per run). We implement DynaTree in PyTorch~\cite{pytorch} on top of HuggingFace Transformers~\cite{transformers}. Across methods, we reuse KV caches where applicable and synchronize GPU execution for timing to obtain comparable wall-clock measurements.
 
 \paragraph{Workloads and data preprocessing.}
 We report results on WikiText-2~\citep{merity2016pointer} and PG-19~\citep{rae2019compressive}. For each sampled prompt, we generate \(T\) new tokens with greedy decoding; unless stated otherwise, \(T=1500\). To control prefill cost, prompts are truncated to a maximum length \(L_{\max}\) (\(L_{\max}=800\) for WikiText-2 and \(L_{\max}=1000\) for PG-19). We evaluate \(N=10\) prompts and discard the first \(W=2\) runs as warmup, reporting mean and standard deviation over the remaining runs. Appendix~\ref{app:exp-config} summarizes the common settings.
