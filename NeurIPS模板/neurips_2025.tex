@@ -301,19 +301,19 @@ We compare against the following baselines under identical greedy decoding setti
 
 \subsection{Main Results}
 \label{main-results}
-Table~\ref{tab:main-results} reports end-to-end throughput on WikiText-2 and PG-19 for \(T=1500\). DynaTree achieves the best throughput on both datasets, improving over autoregressive decoding, linear speculative decoding, and a fixed-tree baseline. On WikiText-2, DynaTree reaches 219.5~t/s versus 200.7~t/s for the static tree, demonstrating that adapting the draft structure can improve the draft--verify trade-off over a fixed configuration under the same evaluation protocol.
+Table~\ref{tab:main-results} reports end-to-end throughput on WikiText-2 and PG-19 for \(T=1500\). DynaTree achieves the best throughput on both datasets, improving over autoregressive decoding, linear speculative decoding, and a fixed-tree baseline. On WikiText-2, DynaTree reaches 219.5~tokens/s versus 200.7~tokens/s for the static tree, demonstrating that adapting the draft structure can improve the draft--verify trade-off over a fixed configuration under the same evaluation protocol.
 To ensure a fair comparison, the fixed-tree baseline configuration is selected via a grid search under the same evaluation protocol and reported as the best (or near-best) setting in the sweep (Appendix, Figure~\ref{fig:fixed-tree-sweep}).
 
 \begin{table}[tbp]
 \centering
-\caption{\textbf{Main results (\(T=1500\)).} Throughput (t/s) and speedup relative to autoregressive decoding on WikiText-2 and PG-19. Values are mean\(\pm\)std over prompts (excluding warmup). For linear speculation, we use \(K=8\) on WikiText-2 and \(K=5\) on PG-19.}
+\caption{\textbf{Main results (\(T=1500\)).} Throughput (tokens/s) and speedup relative to autoregressive decoding on WikiText-2 and PG-19. Values are mean\(\pm\)std over prompts (excluding warmup). For linear speculation, we use \(K=8\) on WikiText-2 and \(K=5\) on PG-19.}
 \label{tab:main-results}
 \small
 \begin{tabular}{lcccc}
 \toprule
 Method & \multicolumn{2}{c}{WikiText-2} & \multicolumn{2}{c}{PG-19} \\
 \cmidrule(lr){2-3} \cmidrule(lr){4-5}
-& Throughput (t/s) & Speedup & Throughput (t/s) & Speedup \\
+& Throughput (tokens/s) & Speedup & Throughput (tokens/s) & Speedup \\
 \midrule
 AR & 133.4\(\pm\)0.5 & 1.00\(\times\) & 114.8\(\pm\)20.6 & 1.00\(\times\) \\
 Linear Spec & 196.1\(\pm\)37.8 & 1.47\(\times\) & 144.9\(\pm\)28.6 & 1.26\(\times\) \\
@@ -392,7 +392,7 @@ For a finer-grained progressive breakdown of the three adaptive components (Fixe
 \small
 \begin{tabular}{lccc}
     \toprule
-Variant & Throughput (t/s) & Speedup & \(\Delta\) vs Fixed \\
+Variant & Throughput (tokens/s) & Speedup & \(\Delta\) vs Fixed \\
     \midrule
 Fixed Tree (\(D=5,B=2\)) & 188.0\(\pm\)16.5 & 1.42\(\times\) & 0.0\% \\
 + Dynamic Tree Breadth \& Depth & 213.2\(\pm\)26.1 & 1.61\(\times\) & +13.4\% \\
@@ -430,7 +430,7 @@ We place supplementary parameter sensitivity analyses in Appendix~\ref{app:addit
 
 
 \section{Conclusion}
-We presented DynaTree, a greedy-consistent tree-based speculative decoding method that drafts a candidate token tree with a lightweight model and verifies all drafted nodes in a single target-model pass using a structured attention mask. DynaTree adaptively allocates verification budget via \emph{Dynamic Tree Breadth} and \emph{Dynamic Tree Depth} and stabilizes decoding through \emph{History Adaptation}. Across WikiText-2 and PG-19 at \(T=1500\), DynaTree improves throughput and reduces per-token latency relative to autoregressive decoding, linear speculative decoding, and a fixed-tree baseline by increasing the expected number of committed tokens per verification iteration. An important limitation of our study is that we focus on greedy decoding with a fixed model pair on a single-GPU setup; extending adaptive tree verification to broader serving regimes (e.g., longer contexts, varying prompt lengths, and batching) and reducing system overhead via kernel-level optimizations are promising directions for future work.
+We presented DynaTree, a greedy-consistent tree-based speculative decoding method that drafts a candidate token tree with a lightweight model and verifies all drafted nodes in a single target-model pass using a structured attention mask. DynaTree adaptively allocates verification budget via \emph{Dynamic Tree Breadth} and \emph{Dynamic Tree Depth} and stabilizes decoding through \emph{History Adaptation}. Across WikiText-2 and PG-19 at \(T=1500\), DynaTree improves throughput and reduces per-token latency relative to autoregressive decoding, linear speculative decoding, and a fixed-tree baseline by increasing the expected number of committed tokens per verification iteration. Our evaluation is limited to deterministic greedy decoding with a single target--draft model pair on a single GPU, and does not cover batch-serving scenarios. Extending adaptive tree verification to batched serving, additional model pairs, and broader workloads, while further reducing system overhead, is a promising direction for future work.
 
 \FloatBarrier % ensure all floats are placed before references
 \bibliographystyle{plainnat}
@@ -525,13 +525,13 @@ Table~\ref{tab:ablation-progressive-phases} reports a fine-grained progressive b
 
 \begin{table}[t]
 \centering
-\caption{\textbf{Progressive component breakdown on WikiText-2 (\(T=1500\)).} Throughput (t/s) and speedup are computed relative to the autoregressive baseline under the same setting. \(\Delta\) vs.\ Fixed is computed relative to the fixed-tree backbone in this ablation run.}
+\caption{\textbf{Progressive component breakdown on WikiText-2 (\(T=1500\)).} Throughput (tokens/s) and speedup are computed relative to the autoregressive baseline under the same setting. \(\Delta\) vs.\ Fixed is computed relative to the fixed-tree backbone in this ablation run.}
 \label{tab:ablation-progressive-phases}
 \small
 \setlength{\tabcolsep}{5pt}
 \begin{tabular}{lccc}
     \toprule
-Variant & Throughput (t/s) & Speedup & \(\Delta\) vs Fixed \\
+Variant & Throughput (tokens/s) & Speedup & \(\Delta\) vs Fixed \\
     \midrule
 Fixed Tree (\(D=5,B=2\)) & 188.0\(\pm\)16.5 & 1.42\(\times\) & 0.0\% \\
 Phase 1: + Dynamic Tree Breadth & 186.5\(\pm\)25.2 & 1.40\(\times\) & -0.8\% \\
