@@ -379,6 +379,7 @@ Fixed Tree & 71.0\% & 6.79 & 7.10 & 221 & 64.3\% & 6.20 & 6.43 & 242 \\
 
 \paragraph{Discussion.}
 Two trends help explain the observed speedups. First, compared with linear drafting, tree-based methods are less sensitive to early mismatches: when the draft model diverges, alternative branches can still contain a greedy-consistent continuation, which increases the expected committed prefix length per verification step. Second, compared with a fixed tree, DynaTree allocates more of the node budget to regions where the draft model is confident while curtailing wasteful expansion in uncertain regions. This adaptivity improves verification efficiency (Table~\ref{tab:verification-efficiency}) and translates into higher end-to-end throughput (Table~\ref{tab:main-results}).
+Finally, while our experiments target latency-critical single-request decoding (batch size \(=1\)), extending adaptive tree construction and verification to high-throughput continuous batching (e.g., in production serving engines) introduces additional systems challenges, such as coordinating per-request tree shapes and managing KV-cache allocation and fragmentation; we leave a thorough batched-serving study to future work.
 
 \subsection{Ablation Study}
 \label{sec:ablation}
@@ -517,6 +518,9 @@ branch bounds \(B_{\min}\le B_{\mathrm{mid}}\le B_{\max}\); confidence threshold
 \label{app:additional-analyses}
 \paragraph{Scope.}
 This appendix reports additional analyses that support the main claims: (i)~a fixed-tree sweep that validates the static-tree baseline is reasonably tuned; (ii)~sensitivity of DynaTree to drafting hyperparameters; (iii)~prompt-length sensitivity; and (iv)~memory footprint.
+
+\paragraph{Implementation overhead.}
+Our current implementation is a Python/PyTorch prototype. While this introduces nontrivial framework and control-flow overhead compared to highly optimized kernel-level implementations, DynaTree still achieves consistent speedups in our benchmarks, suggesting additional headroom from a more optimized implementation (e.g., fused kernels for tree attention and bookkeeping) in future work.
 
 \subsection{Fixed-tree Hyperparameter Sweep}
 We perform a fixed-tree hyperparameter sweep under the paper protocol to ensure the static-tree baseline is reasonably tuned. The sweep varies depth \(D\), branching factor \(B\), and pruning threshold \(\tau\) while holding the node budget fixed. Figure~\ref{fig:fixed-tree-sweep} summarizes how throughput-related metrics change across the grid, and illustrates that the baseline configuration reported in the main tables lies in a stable high-performing region rather than being a brittle outlier.
