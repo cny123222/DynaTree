@@ -116,7 +116,7 @@ We propose \textbf{DynaTree}, a training-free tree speculative decoder that cons
 
 In summary, our contributions are:
 \begin{itemize}
-  \item We propose \textbf{DynaTree}, a \textbf{training-free} tree speculative decoding framework that adaptively allocates verification budget via confidence-aware adjustments to tree breadth and depth under an explicit node budget. \textbf{Unlike Medusa~\cite{medusa} or the EAGLE family~\cite{eagle,eagle2,eagle3}, which require training auxiliary modules and/or architectural modifications}, DynaTree is plug-and-play for existing target--draft model pairs.
+  \item We propose \textbf{DynaTree}, a \textbf{training-free} tree speculative decoding framework that adaptively allocates verification budget via confidence-aware adjustments to tree breadth and depth under an explicit node budget. Unlike Medusa~\cite{medusa} or the EAGLE family~\cite{eagle,eagle2,eagle3}, which require training auxiliary modules and/or architectural modifications, DynaTree is plug-and-play for existing target--draft model pairs.
   
   \item We introduce a lightweight three-component adaptation mechanism (\emph{Dynamic Tree Breadth}, \emph{Dynamic Tree Depth}, and \emph{History Adaptation}) that integrates with tree-attention verification and probability-threshold pruning.
   
@@ -303,11 +303,12 @@ We compare against the following baselines under identical greedy decoding setti
 \label{main-results}
 Table~\ref{tab:main-results} reports end-to-end throughput on WikiText-2 and PG-19 for \(T=1500\). DynaTree achieves the best throughput on both datasets, improving over autoregressive decoding, linear speculative decoding, and a fixed-tree baseline. On WikiText-2, DynaTree reaches 219.5~tokens/s versus 200.7~tokens/s for the static tree, demonstrating that adapting the draft structure can improve the draft--verify trade-off over a fixed configuration under the same evaluation protocol.
 To ensure a fair comparison, the fixed-tree baseline configuration is selected via a grid search under the same evaluation protocol and reported as the best (or near-best) setting in the sweep (Appendix, Figure~\ref{fig:fixed-tree-sweep}).
+In Tables~\ref{tab:main-results}--\ref{tab:latency-metrics}, the Fixed Tree baseline uses \(D=8\), \(B=3\), and pruning threshold \(\tau=0.1\).
 In other words, our Fixed Tree baseline is not a weak strawman: it represents the best-performing static configuration found by an exhaustive sweep under the paper protocol. Even against this tuned baseline, DynaTree improves throughput by +9.4\% on WikiText-2 and +5.1\% on PG-19.
 
 \begin{table}[tbp]
 \centering
-\caption{\textbf{Main results (\(T=1500\)).} Throughput (tokens/s) and speedup relative to autoregressive decoding on WikiText-2 and PG-19. Values are mean\(\pm\)std over prompts (excluding warmup). For linear speculation, we use \(K=8\) on WikiText-2 and \(K=5\) on PG-19. The fixed-tree baseline uses \(D=8\), \(B=3\), and pruning threshold \(\tau=0.1\).}
+\caption{\textbf{Main results (\(T=1500\)).} Throughput (tokens/s) and speedup relative to autoregressive decoding on WikiText-2 and PG-19. Values are mean\(\pm\)std over prompts (excluding warmup). For linear speculation, we use \(K=8\) on WikiText-2 and \(K=5\) on PG-19.}
 \label{tab:main-results}
 \small
 \begin{tabular}{lcccc}
@@ -349,7 +350,7 @@ Method & \multicolumn{2}{c}{WikiText-2} & \multicolumn{2}{c}{PG-19} \\
 \midrule
 AR & 18.9\(\pm\)6.1 & 7.48\(\pm\)0.02 & 21.8\(\pm\)8.7 & 9.00\(\pm\)1.69 \\
 Linear Spec & 14.6\(\pm\)4.0 & 5.32\(\pm\)1.24 & 11.1\(\pm\)3.3 & 7.17\(\pm\)1.42 \\
-Fixed Tree (\(D=8,B=3,\tau=0.1\)) & 14.6\(\pm\)4.2 & 5.30\(\pm\)1.63 & 9.7\(\pm\)0.4 & 5.55\(\pm\)0.95 \\
+Fixed Tree & 14.6\(\pm\)4.2 & 5.30\(\pm\)1.63 & 9.7\(\pm\)0.4 & 5.55\(\pm\)0.95 \\
 \textbf{DynaTree} & 14.4\(\pm\)4.0 & \textbf{4.59\(\pm\)0.47} & 9.6\(\pm\)0.6 & \textbf{5.30\(\pm\)1.02} \\
 \bottomrule
 \end{tabular}
